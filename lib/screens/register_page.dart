@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/colors.dart';
+import '../services/auth_service.dart';
 import 'login_page.dart';
 import 'main_navigation_page.dart';
 
@@ -14,9 +15,12 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
+  final _formKey = GlobalKey<FormState>();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -36,32 +40,44 @@ class _RegisterPageState extends State<RegisterPage> {
           SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 40),
-                  _buildHeader(),
-                  const SizedBox(height: 40),
-                  _buildUsernameField(),
-                  const SizedBox(height: 20),
-                  _buildEmailField(),
-                  const SizedBox(height: 20),
-                  _buildPasswordField(),
-                  const SizedBox(height: 20),
-                  _buildConfirmPasswordField(),
-                  const SizedBox(height: 30),
-                  _buildRegisterButton(),
-                  const SizedBox(height: 30),
-                  _buildSocialRegisterSection(),
-                  const SizedBox(height: 30),
-                  _buildSkipForNow(),
-                  const SizedBox(height: 40),
-                  _buildLoginLink(),
-                  const SizedBox(height: 20),
-                ],
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 40),
+                    _buildHeader(),
+                    const SizedBox(height: 40),
+                    _buildUsernameField(),
+                    const SizedBox(height: 20),
+                    _buildEmailField(),
+                    const SizedBox(height: 20),
+                    _buildPasswordField(),
+                    const SizedBox(height: 20),
+                    _buildConfirmPasswordField(),
+                    const SizedBox(height: 30),
+                    _buildRegisterButton(),
+                    const SizedBox(height: 30),
+                    _buildSocialRegisterSection(),
+                    const SizedBox(height: 30),
+                    _buildSkipForNow(),
+                    const SizedBox(height: 40),
+                    _buildLoginLink(),
+                    const SizedBox(height: 20),
+                  ],
+                ),
               ),
             ),
           ),
+          if (_isLoading)
+            Container(
+              color: Colors.black.withOpacity(0.5),
+              child: const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.red),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -78,9 +94,7 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
       ),
       child: Container(
-        decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.3),
-        ),
+        decoration: BoxDecoration(color: Colors.black.withOpacity(0.3)),
       ),
     );
   }
@@ -116,13 +130,22 @@ class _RegisterPageState extends State<RegisterPage> {
         color: Colors.white.withOpacity(0.9),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: TextField(
+      child: TextFormField(
         controller: _usernameController,
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Please enter your name';
+          }
+          return null;
+        },
         decoration: InputDecoration(
-          hintText: 'Username',
+          hintText: 'Name',
           hintStyle: TextStyle(color: Colors.grey.shade400),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 16,
+          ),
           prefixIcon: Icon(Icons.person_outline, color: Colors.grey.shade400),
         ),
       ),
@@ -135,14 +158,26 @@ class _RegisterPageState extends State<RegisterPage> {
         color: Colors.white.withOpacity(0.9),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: TextField(
+      child: TextFormField(
         controller: _emailController,
         keyboardType: TextInputType.emailAddress,
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Please enter your email';
+          }
+          if (!value.contains('@')) {
+            return 'Please enter a valid email';
+          }
+          return null;
+        },
         decoration: InputDecoration(
           hintText: 'Email',
           hintStyle: TextStyle(color: Colors.grey.shade400),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 16,
+          ),
           prefixIcon: Icon(Icons.email_outlined, color: Colors.grey.shade400),
         ),
       ),
@@ -155,18 +190,32 @@ class _RegisterPageState extends State<RegisterPage> {
         color: Colors.white.withOpacity(0.9),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: TextField(
+      child: TextFormField(
         controller: _passwordController,
         obscureText: _obscurePassword,
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Please enter your password';
+          }
+          if (value.length < 6) {
+            return 'Password must be at least 6 characters';
+          }
+          return null;
+        },
         decoration: InputDecoration(
           hintText: 'Password',
           hintStyle: TextStyle(color: Colors.grey.shade400),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 16,
+          ),
           prefixIcon: Icon(Icons.lock_outline, color: Colors.grey.shade400),
           suffixIcon: IconButton(
             icon: Icon(
-              _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+              _obscurePassword
+                  ? Icons.visibility_outlined
+                  : Icons.visibility_off_outlined,
               color: Colors.grey.shade400,
             ),
             onPressed: () {
@@ -186,18 +235,32 @@ class _RegisterPageState extends State<RegisterPage> {
         color: Colors.white.withOpacity(0.9),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: TextField(
+      child: TextFormField(
         controller: _confirmPasswordController,
         obscureText: _obscureConfirmPassword,
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Please confirm your password';
+          }
+          if (value != _passwordController.text) {
+            return 'Passwords do not match';
+          }
+          return null;
+        },
         decoration: InputDecoration(
           hintText: 'Confirm password',
           hintStyle: TextStyle(color: Colors.grey.shade400),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 16,
+          ),
           prefixIcon: Icon(Icons.lock_outline, color: Colors.grey.shade400),
           suffixIcon: IconButton(
             icon: Icon(
-              _obscureConfirmPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+              _obscureConfirmPassword
+                  ? Icons.visibility_outlined
+                  : Icons.visibility_off_outlined,
               color: Colors.grey.shade400,
             ),
             onPressed: () {
@@ -215,12 +278,7 @@ class _RegisterPageState extends State<RegisterPage> {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: () {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const MainNavigationPage()),
-          );
-        },
+        onPressed: _isLoading ? null : _handleRegister,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.red,
           foregroundColor: Colors.white,
@@ -229,14 +287,92 @@ class _RegisterPageState extends State<RegisterPage> {
             borderRadius: BorderRadius.circular(12),
           ),
         ),
-        child: const Text(
-          'Register',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        child: _isLoading
+            ? const SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : const Text(
+                'Register',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
       ),
+    );
+  }
+
+  Future<void> _handleRegister() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await AuthService.signup(
+        name: _usernameController.text.trim(),
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        role: 'user',
+      );
+
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const MainNavigationPage()),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        _showErrorDialog(e.toString().replaceAll('Exception: ', ''));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.error_outline, color: Colors.red, size: 24),
+              SizedBox(width: 8),
+              Text(
+                'Error',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'OK',
+                style: TextStyle(
+                  color: AppColors.red,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -250,10 +386,7 @@ class _RegisterPageState extends State<RegisterPage> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
                 'Or Register with',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                ),
+                style: TextStyle(color: Colors.white, fontSize: 14),
               ),
             ),
             Expanded(child: Divider(color: Colors.white.withOpacity(0.5))),
@@ -306,10 +439,7 @@ class _RegisterPageState extends State<RegisterPage> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(
               'Skip For Now',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-              ),
+              style: TextStyle(color: Colors.white, fontSize: 14),
             ),
           ),
           Expanded(child: Divider(color: Colors.white.withOpacity(0.5))),
@@ -325,10 +455,7 @@ class _RegisterPageState extends State<RegisterPage> {
         children: [
           Text(
             "Already have an account?",
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-            ),
+            style: TextStyle(color: Colors.white, fontSize: 14),
           ),
           TextButton(
             onPressed: () {
@@ -352,4 +479,3 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 }
-

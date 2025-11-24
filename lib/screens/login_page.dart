@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/colors.dart';
+import '../services/auth_service.dart';
 import 'register_page.dart';
 import 'main_navigation_page.dart';
 
@@ -13,7 +14,9 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
   bool _obscurePassword = true;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -31,30 +34,42 @@ class _LoginPageState extends State<LoginPage> {
           SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 40),
-                  _buildHeader(),
-                  const SizedBox(height: 40),
-                  _buildEmailField(),
-                  const SizedBox(height: 20),
-                  _buildPasswordField(),
-                  const SizedBox(height: 12),
-                  _buildForgotPassword(),
-                  const SizedBox(height: 30),
-                  _buildLoginButton(),
-                  const SizedBox(height: 30),
-                  _buildSocialLoginSection(),
-                  const SizedBox(height: 30),
-                  _buildSkipForNow(),
-                  const SizedBox(height: 40),
-                  _buildRegisterLink(),
-                  const SizedBox(height: 20),
-                ],
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 40),
+                    _buildHeader(),
+                    const SizedBox(height: 40),
+                    _buildEmailField(),
+                    const SizedBox(height: 20),
+                    _buildPasswordField(),
+                    const SizedBox(height: 12),
+                    _buildForgotPassword(),
+                    const SizedBox(height: 30),
+                    _buildLoginButton(),
+                    const SizedBox(height: 30),
+                    _buildSocialLoginSection(),
+                    const SizedBox(height: 30),
+                    _buildSkipForNow(),
+                    const SizedBox(height: 40),
+                    _buildRegisterLink(),
+                    const SizedBox(height: 20),
+                  ],
+                ),
               ),
             ),
           ),
+          if (_isLoading)
+            Container(
+              color: Colors.black.withOpacity(0.5),
+              child: const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.red),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -71,9 +86,7 @@ class _LoginPageState extends State<LoginPage> {
         ),
       ),
       child: Container(
-        decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.3),
-        ),
+        decoration: BoxDecoration(color: Colors.black.withOpacity(0.3)),
       ),
     );
   }
@@ -118,14 +131,26 @@ class _LoginPageState extends State<LoginPage> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: TextField(
+      child: TextFormField(
         controller: _emailController,
         keyboardType: TextInputType.emailAddress,
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Please enter your email';
+          }
+          if (!value.contains('@')) {
+            return 'Please enter a valid email';
+          }
+          return null;
+        },
         decoration: InputDecoration(
           hintText: 'Enter your email',
           hintStyle: TextStyle(color: Colors.grey.shade400),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 16,
+          ),
           prefixIcon: Icon(Icons.email_outlined, color: Colors.grey.shade400),
         ),
       ),
@@ -138,18 +163,29 @@ class _LoginPageState extends State<LoginPage> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: TextField(
+      child: TextFormField(
         controller: _passwordController,
         obscureText: _obscurePassword,
+        validator: (value) {
+          if (value == null || value.isEmpty) {
+            return 'Please enter your password';
+          }
+          return null;
+        },
         decoration: InputDecoration(
           hintText: 'Enter your password',
           hintStyle: TextStyle(color: Colors.grey.shade400),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 16,
+          ),
           prefixIcon: Icon(Icons.lock_outline, color: Colors.grey.shade400),
           suffixIcon: IconButton(
             icon: Icon(
-              _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+              _obscurePassword
+                  ? Icons.visibility_outlined
+                  : Icons.visibility_off_outlined,
               color: Colors.grey.shade400,
             ),
             onPressed: () {
@@ -184,12 +220,7 @@ class _LoginPageState extends State<LoginPage> {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: () {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const MainNavigationPage()),
-          );
-        },
+        onPressed: _isLoading ? null : _handleLogin,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.red,
           foregroundColor: Colors.white,
@@ -198,14 +229,90 @@ class _LoginPageState extends State<LoginPage> {
             borderRadius: BorderRadius.circular(12),
           ),
         ),
-        child: const Text(
-          'Login',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        child: _isLoading
+            ? const SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : const Text(
+                'Login',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
       ),
+    );
+  }
+
+  Future<void> _handleLogin() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await AuthService.login(
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
+
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const MainNavigationPage()),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        _showErrorDialog(e.toString().replaceAll('Exception: ', ''));
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.error_outline, color: Colors.red, size: 24),
+              SizedBox(width: 8),
+              Text(
+                'Error',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'OK',
+                style: TextStyle(
+                  color: AppColors.red,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -219,10 +326,7 @@ class _LoginPageState extends State<LoginPage> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
                 'Or Login with',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                ),
+                style: TextStyle(color: Colors.white, fontSize: 14),
               ),
             ),
             Expanded(child: Divider(color: Colors.white.withOpacity(0.5))),
@@ -275,10 +379,7 @@ class _LoginPageState extends State<LoginPage> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(
               'Skip For Now',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-              ),
+              style: TextStyle(color: Colors.white, fontSize: 14),
             ),
           ),
           Expanded(child: Divider(color: Colors.white.withOpacity(0.5))),
@@ -294,10 +395,7 @@ class _LoginPageState extends State<LoginPage> {
         children: [
           Text(
             "Don't have an account?",
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-            ),
+            style: TextStyle(color: Colors.white, fontSize: 14),
           ),
           TextButton(
             onPressed: () {
@@ -321,4 +419,3 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
-

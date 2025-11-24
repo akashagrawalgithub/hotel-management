@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/colors.dart';
+import '../services/hotel_service.dart';
 import 'notification_page.dart';
 import 'hotel_detail_page.dart';
 
@@ -14,56 +15,8 @@ class _FindPageState extends State<FindPage> {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _recommendedScrollController = ScrollController();
 
-  final List<Map<String, dynamic>> _bestMatches = [
-    {
-      'name': 'Sri Ranganadha Nilayam',
-      'location': 'Srirangam,tamil Nadu',
-      'originalPrice': '5,999',
-      'discountedPrice': '3,599',
-      'discount': '40%',
-      'image': 'assets/images/booking.jpg',
-    },
-    {
-      'name': 'Sri Ranganadha Nilayam',
-      'location': 'Srirangam,tamil Nadu',
-      'originalPrice': '5,999',
-      'discountedPrice': '3,599',
-      'discount': '40%',
-      'image': 'assets/images/booking.jpg',
-    },
-    {
-      'name': 'Sri Ranganadha Nilayam',
-      'location': 'Srirangam,tamil Nadu',
-      'originalPrice': '5,999',
-      'discountedPrice': '3,599',
-      'discount': '40%',
-      'image': 'assets/images/booking.jpg',
-    },
-    {
-      'name': 'Sri Ranganadha Nilayam',
-      'location': 'Srirangam,tamil Nadu',
-      'originalPrice': '5,999',
-      'discountedPrice': '3,599',
-      'discount': '40%',
-      'image': 'assets/images/booking.jpg',
-    },
-    {
-      'name': 'Sri Ranganadha Nilayam',
-      'location': 'Srirangam,tamil Nadu',
-      'originalPrice': '5,999',
-      'discountedPrice': '3,599',
-      'discount': '40%',
-      'image': 'assets/images/booking.jpg',
-    },
-    {
-      'name': 'Sri Ranganadha Nilayam',
-      'location': 'Srirangam,tamil Nadu',
-      'originalPrice': '5,999',
-      'discountedPrice': '3,599',
-      'discount': '40%',
-      'image': 'assets/images/booking.jpg',
-    },
-  ];
+  List<Map<String, dynamic>> _bestMatches = [];
+  bool _isLoading = true;
 
   final List<Map<String, dynamic>> _recommendedHotels = [
     {
@@ -90,10 +43,69 @@ class _FindPageState extends State<FindPage> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _loadHotels();
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     _recommendedScrollController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadHotels() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final response = await HotelService.getHotels();
+      if (response.data != null && response.data is List) {
+        final hotels = response.data as List;
+        setState(() {
+          _bestMatches = hotels.map((hotel) {
+            final location = hotel['location'] ?? {};
+            final city = location['city'] ?? '';
+            final state = location['state'] ?? '';
+            final locationString = city.isNotEmpty && state.isNotEmpty
+                ? '$city, $state'
+                : city.isNotEmpty
+                ? city
+                : state.isNotEmpty
+                ? state
+                : 'Location not available';
+
+            final images = hotel['images'] ?? [];
+            final imageUrl = images.isNotEmpty ? images[0] : null;
+
+            return {
+              'id': hotel['_id'] ?? '',
+              'name': hotel['name'] ?? 'Hotel Name',
+              'location': locationString,
+              'originalPrice': '5,999',
+              'discountedPrice': '3,599',
+              'discount': '40%',
+              'image': imageUrl ?? 'assets/images/booking.jpg',
+              'description': hotel['description'] ?? '',
+              'rating': hotel['rating']?['average'] ?? 0.0,
+              'amenities': hotel['amenities'] ?? [],
+              'hotelData': hotel,
+            };
+          }).toList();
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -139,7 +151,11 @@ class _FindPageState extends State<FindPage> {
                   shape: BoxShape.circle,
                 ),
                 child: IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
+                  icon: const Icon(
+                    Icons.arrow_back,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                   onPressed: () => Navigator.pop(context),
                 ),
               ),
@@ -162,11 +178,17 @@ class _FindPageState extends State<FindPage> {
               shape: BoxShape.circle,
             ),
             child: IconButton(
-              icon: const Icon(Icons.notifications, color: Colors.white, size: 20),
+              icon: const Icon(
+                Icons.notifications,
+                color: Colors.white,
+                size: 20,
+              ),
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const NotificationPage()),
+                  MaterialPageRoute(
+                    builder: (context) => const NotificationPage(),
+                  ),
                 );
               },
             ),
@@ -223,15 +245,31 @@ class _FindPageState extends State<FindPage> {
             ),
           ),
         ),
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          itemCount: _bestMatches.length,
-          itemBuilder: (context, index) {
-            return _buildBestMatchCard(_bestMatches[index]);
-          },
-        ),
+        if (_isLoading)
+          const Padding(
+            padding: EdgeInsets.all(20.0),
+            child: Center(child: CircularProgressIndicator()),
+          )
+        else if (_bestMatches.isEmpty)
+          const Padding(
+            padding: EdgeInsets.all(20.0),
+            child: Center(
+              child: Text(
+                'No hotels available',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+          )
+        else
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            itemCount: _bestMatches.length,
+            itemBuilder: (context, index) {
+              return _buildBestMatchCard(_bestMatches[index]);
+            },
+          ),
       ],
     );
   }
@@ -260,102 +298,138 @@ class _FindPageState extends State<FindPage> {
           ],
         ),
         child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(15),
-              bottomLeft: Radius.circular(15),
-            ),
-            child: Image.asset(
-              hotel['image'],
-              width: 100,
-              height: 130,
-              fit: BoxFit.cover,
-            ),
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    hotel['name'],
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(15),
+                bottomLeft: Radius.circular(15),
+              ),
+              child:
+                  hotel['image'] != null &&
+                      hotel['image'].toString().startsWith('http')
+                  ? Image.network(
+                      hotel['image'],
+                      width: 100,
+                      height: 130,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Image.asset(
+                          'assets/images/booking.jpg',
+                          width: 100,
+                          height: 130,
+                          fit: BoxFit.cover,
+                        );
+                      },
+                    )
+                  : Image.asset(
+                      hotel['image'] ?? 'assets/images/booking.jpg',
+                      width: 100,
+                      height: 130,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          width: 100,
+                          height: 130,
+                          color: Colors.grey.shade300,
+                          child: const Icon(
+                            Icons.hotel,
+                            size: 40,
+                            color: Colors.grey,
+                          ),
+                        );
+                      },
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    hotel['location'],
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey.shade600,
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      hotel['name'],
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(Icons.arrow_downward, color: Colors.green, size: 16),
-                      const SizedBox(width: 4),
-                      Text(
-                        hotel['discount'],
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
+                    const SizedBox(height: 4),
+                    Text(
+                      hotel['location'],
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.arrow_downward,
                           color: Colors.green,
+                          size: 16,
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Text(
-                        'Rs ${hotel['originalPrice']}',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey.shade400,
-                          decoration: TextDecoration.lineThrough,
+                        const SizedBox(width: 4),
+                        Text(
+                          hotel['discount'],
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.green,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Rs${hotel['discountedPrice']}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Text(
+                          'Rs ${hotel['originalPrice']}',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey.shade400,
+                            decoration: TextDecoration.lineThrough,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                        const SizedBox(width: 8),
+                        Text(
+                          'Rs${hotel['discountedPrice']}',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(right: 15),
-            child: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: AppColors.red,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.arrow_forward,
-                color: Colors.white,
-                size: 20,
+            Padding(
+              padding: const EdgeInsets.only(right: 15),
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.red,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.arrow_forward,
+                  color: Colors.white,
+                  size: 20,
+                ),
               ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }
@@ -417,102 +491,101 @@ class _FindPageState extends State<FindPage> {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(20),
           child: Stack(
-          children: [
-            Image.asset(
-              hotel['image'],
-              width: double.infinity,
-              height: double.infinity,
-              fit: BoxFit.cover,
-            ),
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.black.withOpacity(0.7),
-                  ],
+            children: [
+              Image.asset(
+                hotel['image'],
+                width: double.infinity,
+                height: double.infinity,
+                fit: BoxFit.cover,
+              ),
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
+                  ),
                 ),
               ),
-            ),
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Padding(
-                padding: const EdgeInsets.all(15),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      hotel['name'],
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      hotel['location'],
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
-                        fontSize: 14,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          '${hotel['price']}/night',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Padding(
+                  padding: const EdgeInsets.all(15),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        hotel['name'],
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(12),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        hotel['location'],
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 14,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '${hotel['price']}/night',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.star,
-                                color: AppColors.gradientStart,
-                                size: 16,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                hotel['rating'].toString(),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.star,
+                                  color: AppColors.gradientStart,
+                                  size: 16,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 4),
+                                Text(
+                                  hotel['rating'].toString(),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
 }
-

@@ -4,7 +4,13 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 class AuthService {
   static const _storage = FlutterSecureStorage();
   static const _tokenKey = 'auth_token';
-  static const _baseUrl = 'https://hotel-backend-vgct.onrender.com';
+  static const _userIdKey = 'user_id';
+  static const _userNameKey = 'user_name';
+  static const _userEmailKey = 'user_email';
+  static const _userFirstNameKey = 'user_first_name';
+  static const _userLastNameKey = 'user_last_name';
+  static const _userPhoneKey = 'user_phone';
+  static const _baseUrl = 'https://hotel-backend-vgct.onrender.com/api';
 
   static final Dio _dio = Dio(
     BaseOptions(
@@ -18,12 +24,15 @@ class AuthService {
     ),
   );
 
+  static bool _interceptorsInitialized = false;
+
   // Initialize Dio with interceptors for token management
   static void _setupInterceptors() {
+    if (_interceptorsInitialized) return;
+
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
-          // Add token to headers if available
           final token = await getToken();
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
@@ -31,15 +40,14 @@ class AuthService {
           return handler.next(options);
         },
         onError: (error, handler) async {
-          // Handle 401 unauthorized - token expired
           if (error.response?.statusCode == 401) {
             await clearToken();
-            // You can navigate to login page here
           }
           return handler.next(error);
         },
       ),
     );
+    _interceptorsInitialized = true;
   }
 
   // Save auth token securely
@@ -57,10 +65,116 @@ class AuthService {
     await _storage.delete(key: _tokenKey);
   }
 
+  // Save user data
+  static Future<void> saveUserData({
+    required String userId,
+    required String name,
+    required String email,
+  }) async {
+    await _storage.write(key: _userIdKey, value: userId);
+    await _storage.write(key: _userNameKey, value: name);
+    await _storage.write(key: _userEmailKey, value: email);
+  }
+
+  // Get user ID
+  static Future<String?> getUserId() async {
+    return await _storage.read(key: _userIdKey);
+  }
+
+  // Get user name
+  static Future<String?> getUserName() async {
+    return await _storage.read(key: _userNameKey);
+  }
+
+  // Get user email
+  static Future<String?> getUserEmail() async {
+    return await _storage.read(key: _userEmailKey);
+  }
+
+  // Get user first name
+  static Future<String?> getUserFirstName() async {
+    return await _storage.read(key: _userFirstNameKey);
+  }
+
+  // Get user last name
+  static Future<String?> getUserLastName() async {
+    return await _storage.read(key: _userLastNameKey);
+  }
+
+  // Get user phone
+  static Future<String?> getUserPhone() async {
+    return await _storage.read(key: _userPhoneKey);
+  }
+
+  // Save additional user info
+  static Future<void> saveAdditionalUserInfo({
+    String? firstName,
+    String? lastName,
+    String? phone,
+  }) async {
+    if (firstName != null) {
+      await _storage.write(key: _userFirstNameKey, value: firstName);
+    }
+    if (lastName != null) {
+      await _storage.write(key: _userLastNameKey, value: lastName);
+    }
+    if (phone != null) {
+      await _storage.write(key: _userPhoneKey, value: phone);
+    }
+  }
+
+  // Clear user data
+  static Future<void> clearUserData() async {
+    await _storage.delete(key: _userIdKey);
+    await _storage.delete(key: _userNameKey);
+    await _storage.delete(key: _userEmailKey);
+    await _storage.delete(key: _userFirstNameKey);
+    await _storage.delete(key: _userLastNameKey);
+    await _storage.delete(key: _userPhoneKey);
+  }
+
   // Check if user is authenticated
   static Future<bool> isAuthenticated() async {
     final token = await getToken();
     return token != null && token.isNotEmpty;
+  }
+
+  // Signup API call
+  static Future<Response> signup({
+    required String name,
+    required String email,
+    required String password,
+    required String role,
+  }) async {
+    try {
+      _setupInterceptors();
+      final response = await _dio.post(
+        '/auth/signup',
+        data: {
+          'name': name,
+          'email': email,
+          'password': password,
+          'role': role,
+        },
+      );
+
+      if (response.data['token'] != null) {
+        await saveToken(response.data['token']);
+      }
+
+      if (response.data['user'] != null) {
+        final user = response.data['user'];
+        await saveUserData(
+          userId: user['_id'] ?? '',
+          name: user['name'] ?? '',
+          email: user['email'] ?? '',
+        );
+      }
+
+      return response;
+    } catch (e) {
+      rethrow;
+    }
   }
 
   // Login API call
@@ -68,51 +182,88 @@ class AuthService {
     try {
       _setupInterceptors();
       final response = await _dio.post(
-        '/login',
-        data: {
-          'email': email,
-          'password': password,
-        },
+        '/auth/login',
+        data: {'email': email, 'password': password},
       );
-      
-      // Save token if login successful
+
       if (response.data['token'] != null) {
         await saveToken(response.data['token']);
       }
-      
+
+      if (response.data['user'] != null) {
+        final user = response.data['user'];
+        await saveUserData(
+          userId: user['_id'] ?? '',
+          name: user['name'] ?? '',
+          email: user['email'] ?? '',
+        );
+      }
+
       return response;
     } catch (e) {
       rethrow;
     }
   }
 
-  // Register API call
-  static Future<Response> register(Map<String, dynamic> userData) async {
+  // Update User API call
+  static Future<Response> updateUser(
+    String userId, {
+    String? name,
+    String? email,
+    String? password,
+  }) async {
     try {
       _setupInterceptors();
-      final response = await _dio.post(
-        '/register',
-        data: userData,
-      );
-      
-      // Save token if registration successful
-      if (response.data['token'] != null) {
-        await saveToken(response.data['token']);
+      final Map<String, dynamic> data = {};
+      if (name != null) data['name'] = name;
+      if (email != null) data['email'] = email;
+      if (password != null) data['password'] = password;
+
+      final response = await _dio.put('/auth/update/$userId', data: data);
+
+      if (response.data['user'] != null) {
+        final user = response.data['user'];
+        await saveUserData(
+          userId: user['_id'] ?? userId,
+          name: user['name'] ?? name ?? '',
+          email: user['email'] ?? email ?? '',
+        );
+      } else {
+        final currentName = await getUserName();
+        final currentEmail = await getUserEmail();
+        await saveUserData(
+          userId: userId,
+          name: name ?? currentName ?? '',
+          email: email ?? currentEmail ?? '',
+        );
       }
-      
+
       return response;
     } catch (e) {
       rethrow;
     }
   }
 
-  // Logout
-  static Future<void> logout() async {
-    await clearToken();
+  // Logout API call
+  static Future<Response> logout() async {
+    try {
+      _setupInterceptors();
+      final response = await _dio.post('/auth/logout');
+      await clearToken();
+      await clearUserData();
+      return response;
+    } catch (e) {
+      await clearToken();
+      await clearUserData();
+      rethrow;
+    }
   }
 
   // Generic GET request
-  static Future<Response> get(String endpoint, {Map<String, dynamic>? queryParameters}) async {
+  static Future<Response> get(
+    String endpoint, {
+    Map<String, dynamic>? queryParameters,
+  }) async {
     try {
       _setupInterceptors();
       return await _dio.get(endpoint, queryParameters: queryParameters);
@@ -151,4 +302,3 @@ class AuthService {
     }
   }
 }
-
