@@ -64,6 +64,64 @@ class HotelService {
     }
   }
 
+  // Get booking history by email
+  static Future<Response> getBookingHistory(String email) async {
+    try {
+      _setupInterceptors();
+      final response = await _dio.get(
+        '/bookings/booking-history',
+        queryParameters: {'email': email},
+      );
+      return response;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Get hotel rooms by hotel ID
+  static Future<Response> getHotelRooms(String hotelId) async {
+    try {
+      _setupInterceptors();
+      final response = await _dio.get('/room/get-hotel-rooms/$hotelId');
+      return response;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Get all rooms with filters
+  static Future<Response> getAllRooms({
+    String? city,
+    int? adults,
+    int? children,
+    String? startDate,
+    String? endDate,
+  }) async {
+    try {
+      _setupInterceptors();
+      final queryParams = <String, dynamic>{};
+      if (city != null && city.isNotEmpty) {
+        queryParams['city'] = city;
+      }
+      if (adults != null) {
+        queryParams['adults'] = adults;
+      }
+      if (children != null) {
+        queryParams['children'] = children;
+      }
+      if (startDate != null && startDate.isNotEmpty) {
+        queryParams['startDate'] = startDate;
+      }
+      if (endDate != null && endDate.isNotEmpty) {
+        queryParams['endDate'] = endDate;
+      }
+      final response = await _dio.get('/room/get-all-rooms', queryParameters: queryParams);
+      return response;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   // Generic GET request
   static Future<Response> get(
     String endpoint, {

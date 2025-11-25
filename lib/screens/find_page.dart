@@ -5,7 +5,9 @@ import 'notification_page.dart';
 import 'hotel_detail_page.dart';
 
 class FindPage extends StatefulWidget {
-  const FindPage({super.key});
+  final VoidCallback? onBackPressed;
+  
+  const FindPage({super.key, this.onBackPressed});
 
   @override
   State<FindPage> createState() => _FindPageState();
@@ -16,31 +18,8 @@ class _FindPageState extends State<FindPage> {
   final ScrollController _recommendedScrollController = ScrollController();
 
   List<Map<String, dynamic>> _bestMatches = [];
+  List<Map<String, dynamic>> _recommendedHotels = [];
   bool _isLoading = true;
-
-  final List<Map<String, dynamic>> _recommendedHotels = [
-    {
-      'name': 'Sri Ranganadha Nilayam',
-      'location': 'Srirangam, Tamil Nadu',
-      'price': '480',
-      'rating': 4.8,
-      'image': 'assets/images/sri.jpg',
-    },
-    {
-      'name': 'Sri Ranganadha Nilayam',
-      'location': 'Srirangam, Tamil Nadu',
-      'price': '480',
-      'rating': 4.8,
-      'image': 'assets/images/sri.jpg',
-    },
-    {
-      'name': 'Sri Ranganadha Nilayam',
-      'location': 'Srirangam, Tamil Nadu',
-      'price': '480',
-      'rating': 4.8,
-      'image': 'assets/images/sri.jpg',
-    },
-  ];
 
   @override
   void initState() {
@@ -61,7 +40,7 @@ class _FindPageState extends State<FindPage> {
     });
 
     try {
-      final response = await HotelService.getHotels();
+      final response = await HotelService.getRandomHotels();
       if (response.data != null && response.data is List) {
         final hotels = response.data as List;
         setState(() {
@@ -94,6 +73,9 @@ class _FindPageState extends State<FindPage> {
               'hotelData': hotel,
             };
           }).toList();
+          
+          _recommendedHotels.clear();
+          _recommendedHotels.addAll(_bestMatches);
           _isLoading = false;
         });
       } else {
@@ -156,7 +138,13 @@ class _FindPageState extends State<FindPage> {
                     color: Colors.white,
                     size: 20,
                   ),
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () {
+                    if (widget.onBackPressed != null) {
+                      widget.onBackPressed!();
+                    } else if (Navigator.of(context).canPop()) {
+                      Navigator.pop(context);
+                    }
+                  },
                 ),
               ),
               const SizedBox(width: 10),
@@ -492,12 +480,27 @@ class _FindPageState extends State<FindPage> {
           borderRadius: BorderRadius.circular(20),
           child: Stack(
             children: [
-              Image.asset(
-                hotel['image'],
-                width: double.infinity,
-                height: double.infinity,
-                fit: BoxFit.cover,
-              ),
+              hotel['image'].toString().startsWith('http')
+                  ? Image.network(
+                      hotel['image'],
+                      width: double.infinity,
+                      height: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Image.asset(
+                          'assets/images/sri.jpg',
+                          width: double.infinity,
+                          height: double.infinity,
+                          fit: BoxFit.cover,
+                        );
+                      },
+                    )
+                  : Image.asset(
+                      hotel['image'] ?? 'assets/images/sri.jpg',
+                      width: double.infinity,
+                      height: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(

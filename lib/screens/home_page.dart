@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../constants/colors.dart';
+import '../services/auth_service.dart';
+import '../services/hotel_service.dart';
 import 'hotel_detail_page.dart';
+import 'search_results_page.dart';
 import 'checkout_page.dart' show DatePickerBottomSheet;
 
 class HomePage extends StatefulWidget {
@@ -17,36 +20,80 @@ class _HomePageState extends State<HomePage> {
   final TextEditingController _guestController = TextEditingController();
   int _selectedFilterIndex = 0;
   DateTime? _selectedDate;
+  DateTime? _checkInDate;
+  DateTime? _checkOutDate;
+  String? _userName;
   final List<String> _filters = ['All', 'AC Room', '4 Stars', 'Near Me', 'Mans', 'Luxury', 'Budget'];
-
-  final List<Map<String, dynamic>> _hotels = [
-    {
-      'name': 'Sri Ranganadha Nilayam',
-      'location': 'Srirangam, Tamil Nadu',
-      'price': '480',
-      'rating': 4.8,
-      'image': 'assets/images/sri.jpg',
-    },
-    {
-      'name': 'Sri Ranganadha Nilayam',
-      'location': 'Srirangam, Tamil Nadu',
-      'price': '480',
-      'rating': 4.8,
-      'image': 'assets/images/sri.jpg',
-    },
-    {
-      'name': 'Sri Rangand Nilayam',
-      'location': 'Srirangam, Ta',
-      'price': '480',
-      'rating': 4.8,
-      'image': 'assets/images/sri.jpg',
-    },
-  ];
+  List<Map<String, dynamic>> _hotels = [];
+  bool _isLoadingHotels = true;
+  bool _isSearching = false;
 
   @override
   void initState() {
     super.initState();
     _guestController.text = '1';
+    _loadUserName();
+    _loadHotels();
+  }
+
+  Future<void> _loadUserName() async {
+    final name = await AuthService.getUserName();
+    if (mounted) {
+      setState(() {
+        _userName = name ?? 'User';
+      });
+    }
+  }
+
+  Future<void> _loadHotels() async {
+    setState(() {
+      _isLoadingHotels = true;
+    });
+
+    try {
+      final response = await HotelService.getRandomHotels();
+      if (response.data != null && response.data is List) {
+        final hotels = response.data as List;
+        setState(() {
+          _hotels = hotels.map((hotel) {
+            final location = hotel['location'] ?? {};
+            final city = location['city'] ?? '';
+            final state = location['state'] ?? '';
+            final locationString = city.isNotEmpty && state.isNotEmpty
+                ? '$city, $state'
+                : city.isNotEmpty
+                    ? city
+                    : state.isNotEmpty
+                        ? state
+                        : 'Location not available';
+
+            final images = hotel['images'] ?? [];
+            final imageUrl = images.isNotEmpty ? images[0] : null;
+
+            return {
+              'id': hotel['_id'] ?? '',
+              'name': hotel['name'] ?? 'Hotel Name',
+              'location': locationString,
+              'price': '4,800',
+              'rating': hotel['rating']?['average'] ?? 0.0,
+              'image': imageUrl ?? 'assets/images/sri.jpg',
+              'description': hotel['description'] ?? '',
+              'amenities': hotel['amenities'] ?? [],
+              'hotelData': hotel,
+            };
+          }).toList();
+          _isLoadingHotels = false;
+        });
+      } else {
+        setState(() {
+          _isLoadingHotels = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoadingHotels = false;
+      });
+    }
   }
 
   @override
@@ -111,13 +158,13 @@ class _HomePageState extends State<HomePage> {
         child: Stack(
           children: [
             Positioned(
-              top: 50,
+              top: 70,
               left: 20,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Hey User Name 👋',
+                    'Hey ${_userName ?? 'User'} 👋',
                     style: TextStyle(
                       color: AppColors.gradientStart,
                       fontSize: 16,
@@ -184,7 +231,7 @@ class _HomePageState extends State<HomePage> {
               borderRadius: BorderRadius.circular(15),
             ),
             child: ElevatedButton(
-              onPressed: () {},
+              onPressed: _isSearching ? null : _performSearch,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.transparent,
                 shadowColor: Colors.transparent,
@@ -192,14 +239,23 @@ class _HomePageState extends State<HomePage> {
                   borderRadius: BorderRadius.circular(15),
                 ),
               ),
-              child: const Text(
-                'Search',
-                style: TextStyle(
-                  color: Color(0xFF8B4513),
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              child: _isSearching
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF8B4513)),
+                      ),
+                    )
+                  : const Text(
+                      'Search',
+                      style: TextStyle(
+                        color: Color(0xFF8B4513),
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
             ),
           ),
           const SizedBox(height: 20),
@@ -287,11 +343,15 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    _selectedDate != null
-                        ? '${_getMonthName(_selectedDate!.month)} ${_selectedDate!.day}, ${_selectedDate!.year}'
-                        : 'Select Date',
+                    _checkInDate != null && _checkOutDate != null
+                        ? '${_getMonthName(_checkInDate!.month)} ${_checkInDate!.day} - ${_getMonthName(_checkOutDate!.month)} ${_checkOutDate!.day}'
+                        : _checkInDate != null
+                            ? '${_getMonthName(_checkInDate!.month)} ${_checkInDate!.day}, ${_checkInDate!.year}'
+                            : _selectedDate != null
+                                ? '${_getMonthName(_selectedDate!.month)} ${_selectedDate!.day}, ${_selectedDate!.year}'
+                                : 'Select Date',
                     style: TextStyle(
-                      color: _selectedDate != null ? Colors.black87 : Colors.grey.shade600,
+                      color: (_checkInDate != null || _selectedDate != null) ? Colors.black87 : Colors.grey.shade600,
                       fontSize: 14,
                     ),
                   ),
@@ -363,15 +423,119 @@ class _HomePageState extends State<HomePage> {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => DatePickerBottomSheet(
-        checkInDate: _selectedDate,
-        checkOutDate: null,
+        checkInDate: _checkInDate ?? _selectedDate,
+        checkOutDate: _checkOutDate,
         onDatesSelected: (checkIn, checkOut) {
           setState(() {
-            _selectedDate = checkIn;
+            _checkInDate = checkIn;
+            _checkOutDate = checkOut;
+            _selectedDate = checkIn; // Keep for backward compatibility
           });
         },
       ),
     );
+  }
+
+  Future<void> _performSearch() async {
+    setState(() {
+      _isSearching = true;
+    });
+
+    try {
+      final city = _locationController.text.trim();
+      final guestCount = int.tryParse(_guestController.text) ?? 0;
+      final adults = guestCount; // Assuming all guests are adults for now
+      final children = 0;
+      
+      String? startDateStr;
+      String? endDateStr;
+      
+      if (_checkInDate != null) {
+        startDateStr = '${_checkInDate!.year}-${_checkInDate!.month.toString().padLeft(2, '0')}-${_checkInDate!.day.toString().padLeft(2, '0')}';
+      }
+      if (_checkOutDate != null) {
+        endDateStr = '${_checkOutDate!.year}-${_checkOutDate!.month.toString().padLeft(2, '0')}-${_checkOutDate!.day.toString().padLeft(2, '0')}';
+      }
+
+      final response = await HotelService.getAllRooms(
+        city: city.isNotEmpty ? city : null,
+        adults: adults > 0 ? adults : null,
+        children: children > 0 ? children : null,
+        startDate: startDateStr,
+        endDate: endDateStr,
+      );
+
+      List<Map<String, dynamic>> searchResults = [];
+
+      if (response.data != null && response.data is List) {
+        final rooms = response.data as List;
+        searchResults = rooms.map((room) {
+          final hotel = room['hotelId'] ?? {};
+          final location = hotel['location'] ?? {};
+          final cityName = location['city'] ?? '';
+          final state = location['state'] ?? '';
+          final locationString = cityName.isNotEmpty && state.isNotEmpty
+              ? '$cityName, $state'
+              : cityName.isNotEmpty
+                  ? cityName
+                  : state.isNotEmpty
+                      ? state
+                      : 'Location not available';
+
+          final images = hotel['images'] ?? [];
+          final imageUrl = images.isNotEmpty ? images[0] : null;
+
+          final basePrice = room['basePrice'] ?? 0;
+          final taxRate = room['taxRate'] ?? 0;
+          final finalPrice = basePrice + (basePrice * taxRate / 100);
+
+          return {
+            'id': hotel['_id'] ?? '',
+            'name': hotel['name'] ?? 'Hotel Name',
+            'location': locationString,
+            'price': finalPrice.toStringAsFixed(0),
+            'discountedPrice': finalPrice.toStringAsFixed(0),
+            'originalPrice': (basePrice * 1.3).toStringAsFixed(0), // Simulated original price
+            'discount': '30%',
+            'rating': hotel['rating']?['average'] ?? 0.0,
+            'image': imageUrl ?? 'assets/images/sri.jpg',
+            'description': hotel['description'] ?? '',
+            'amenities': hotel['amenities'] ?? [],
+            'hotelData': hotel,
+            'roomData': room,
+          };
+        }).toList();
+      }
+
+      setState(() {
+        _isSearching = false;
+      });
+
+      if (!mounted) return;
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SearchResultsPage(
+            searchResults: searchResults,
+            searchQuery: city.isNotEmpty ? city : 'Search',
+          ),
+        ),
+      );
+    } catch (e) {
+      setState(() {
+        _isSearching = false;
+      });
+      
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error searching: ${e.toString()}'),
+          backgroundColor: AppColors.red,
+        ),
+      );
+    }
   }
 
   String _getMonthName(int month) {
@@ -494,15 +658,19 @@ class _HomePageState extends State<HomePage> {
         const SizedBox(height: 15),
         SizedBox(
           height: 280,
-          child: ListView.builder(
-            controller: _scrollController,
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            itemCount: _hotels.length,
-            itemBuilder: (context, index) {
-              return _buildHotelCard(_hotels[index]);
-            },
-          ),
+          child: _isLoadingHotels
+              ? const Center(child: CircularProgressIndicator())
+              : _hotels.isEmpty
+                  ? const Center(child: Text('No hotels available'))
+                  : ListView.builder(
+                      controller: _scrollController,
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      itemCount: _hotels.length,
+                      itemBuilder: (context, index) {
+                        return _buildHotelCard(_hotels[index]);
+                      },
+                    ),
         ),
       ],
     );
@@ -535,12 +703,27 @@ class _HomePageState extends State<HomePage> {
           borderRadius: BorderRadius.circular(20),
           child: Stack(
           children: [
-            Image.asset(
-              hotel['image'],
-              width: double.infinity,
-              height: double.infinity,
-              fit: BoxFit.cover,
-            ),
+            hotel['image'].toString().startsWith('http')
+                ? Image.network(
+                    hotel['image'],
+                    width: double.infinity,
+                    height: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Image.asset(
+                        'assets/images/sri.jpg',
+                        width: double.infinity,
+                        height: double.infinity,
+                        fit: BoxFit.cover,
+                      );
+                    },
+                  )
+                : Image.asset(
+                    hotel['image'] ?? 'assets/images/sri.jpg',
+                    width: double.infinity,
+                    height: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(

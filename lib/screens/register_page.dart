@@ -69,15 +69,6 @@ class _RegisterPageState extends State<RegisterPage> {
               ),
             ),
           ),
-          if (_isLoading)
-            Container(
-              color: Colors.black.withOpacity(0.5),
-              child: const Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.red),
-                ),
-              ),
-            ),
         ],
       ),
     );
@@ -132,12 +123,6 @@ class _RegisterPageState extends State<RegisterPage> {
       ),
       child: TextFormField(
         controller: _usernameController,
-        validator: (value) {
-          if (value == null || value.isEmpty) {
-            return 'Please enter your name';
-          }
-          return null;
-        },
         decoration: InputDecoration(
           hintText: 'Name',
           hintStyle: TextStyle(color: Colors.grey.shade400),
@@ -161,15 +146,6 @@ class _RegisterPageState extends State<RegisterPage> {
       child: TextFormField(
         controller: _emailController,
         keyboardType: TextInputType.emailAddress,
-        validator: (value) {
-          if (value == null || value.isEmpty) {
-            return 'Please enter your email';
-          }
-          if (!value.contains('@')) {
-            return 'Please enter a valid email';
-          }
-          return null;
-        },
         decoration: InputDecoration(
           hintText: 'Email',
           hintStyle: TextStyle(color: Colors.grey.shade400),
@@ -193,15 +169,6 @@ class _RegisterPageState extends State<RegisterPage> {
       child: TextFormField(
         controller: _passwordController,
         obscureText: _obscurePassword,
-        validator: (value) {
-          if (value == null || value.isEmpty) {
-            return 'Please enter your password';
-          }
-          if (value.length < 6) {
-            return 'Password must be at least 6 characters';
-          }
-          return null;
-        },
         decoration: InputDecoration(
           hintText: 'Password',
           hintStyle: TextStyle(color: Colors.grey.shade400),
@@ -238,15 +205,6 @@ class _RegisterPageState extends State<RegisterPage> {
       child: TextFormField(
         controller: _confirmPasswordController,
         obscureText: _obscureConfirmPassword,
-        validator: (value) {
-          if (value == null || value.isEmpty) {
-            return 'Please confirm your password';
-          }
-          if (value != _passwordController.text) {
-            return 'Passwords do not match';
-          }
-          return null;
-        },
         decoration: InputDecoration(
           hintText: 'Confirm password',
           hintStyle: TextStyle(color: Colors.grey.shade400),
@@ -305,7 +263,33 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   Future<void> _handleRegister() async {
-    if (!_formKey.currentState!.validate()) {
+    // Manual validation with snackbar
+    if (_usernameController.text.trim().isEmpty) {
+      _showSnackBar('Please enter your name');
+      return;
+    }
+    if (_emailController.text.trim().isEmpty) {
+      _showSnackBar('Please enter your email');
+      return;
+    }
+    if (!_emailController.text.trim().contains('@')) {
+      _showSnackBar('Please enter a valid email');
+      return;
+    }
+    if (_passwordController.text.isEmpty) {
+      _showSnackBar('Please enter your password');
+      return;
+    }
+    if (_passwordController.text.length < 6) {
+      _showSnackBar('Password must be at least 6 characters');
+      return;
+    }
+    if (_confirmPasswordController.text.isEmpty) {
+      _showSnackBar('Please confirm your password');
+      return;
+    }
+    if (_confirmPasswordController.text != _passwordController.text) {
+      _showSnackBar('Passwords do not match');
       return;
     }
 
@@ -329,7 +313,7 @@ class _RegisterPageState extends State<RegisterPage> {
       }
     } catch (e) {
       if (mounted) {
-        _showErrorDialog(e.toString().replaceAll('Exception: ', ''));
+        _showSnackBar(e.toString().replaceAll('Exception: ', ''));
       }
     } finally {
       if (mounted) {
@@ -338,6 +322,21 @@ class _RegisterPageState extends State<RegisterPage> {
         });
       }
     }
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.red,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
 
   void _showErrorDialog(String message) {

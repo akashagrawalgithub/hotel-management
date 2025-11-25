@@ -560,6 +560,11 @@ class _DatePickerBottomSheetState extends State<DatePickerBottomSheet> {
   DateTime? _selectedStartDate;
   DateTime? _selectedEndDate;
   DateTime _currentMonth = DateTime.now();
+  
+  DateTime get _today {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day);
+  }
 
   @override
   void initState() {
@@ -570,6 +575,11 @@ class _DatePickerBottomSheetState extends State<DatePickerBottomSheet> {
       _currentMonth = DateTime(_selectedStartDate?.year ?? DateTime.now().year,
           _selectedStartDate?.month ?? DateTime.now().month);
     }
+  }
+  
+  bool _isDateBeforeToday(DateTime date) {
+    final dateOnly = DateTime(date.year, date.month, date.day);
+    return dateOnly.isBefore(_today);
   }
 
   @override
@@ -733,17 +743,25 @@ class _DatePickerBottomSheetState extends State<DatePickerBottomSheet> {
               ),
               itemCount: firstDayOfWeek + daysInMonth + (42 - firstDayOfWeek - daysInMonth),
               itemBuilder: (context, index) {
+                DateTime date;
+                bool isCurrentMonth;
+                
                 if (index < firstDayOfWeek) {
                   final prevMonth = DateTime(_currentMonth.year, _currentMonth.month - 1, 0);
                   final day = prevMonth.day - firstDayOfWeek + index + 1;
-                  return _buildDateCell(day, isCurrentMonth: false);
+                  date = DateTime(_currentMonth.year, _currentMonth.month - 1, day);
+                  isCurrentMonth = false;
                 } else if (index < firstDayOfWeek + daysInMonth) {
                   final day = index - firstDayOfWeek + 1;
-                  return _buildDateCell(day, isCurrentMonth: true);
+                  date = DateTime(_currentMonth.year, _currentMonth.month, day);
+                  isCurrentMonth = true;
                 } else {
                   final day = index - firstDayOfWeek - daysInMonth + 1;
-                  return _buildDateCell(day, isCurrentMonth: false);
+                  date = DateTime(_currentMonth.year, _currentMonth.month + 1, day);
+                  isCurrentMonth = false;
                 }
+                
+                return _buildDateCell(date, isCurrentMonth: isCurrentMonth);
               },
             ),
           ),
@@ -752,8 +770,7 @@ class _DatePickerBottomSheetState extends State<DatePickerBottomSheet> {
     );
   }
 
-  Widget _buildDateCell(int day, {required bool isCurrentMonth}) {
-    final date = DateTime(_currentMonth.year, _currentMonth.month, day);
+  Widget _buildDateCell(DateTime date, {required bool isCurrentMonth}) {
     final isStartDate = _selectedStartDate != null &&
         date.year == _selectedStartDate!.year &&
         date.month == _selectedStartDate!.month &&
@@ -766,21 +783,28 @@ class _DatePickerBottomSheetState extends State<DatePickerBottomSheet> {
         _selectedEndDate != null &&
         date.isAfter(_selectedStartDate!) &&
         date.isBefore(_selectedEndDate!);
+    
+    final isPastDate = _isDateBeforeToday(date);
+    final isSelectable = isCurrentMonth && !isPastDate;
 
     return GestureDetector(
-      onTap: isCurrentMonth
+      onTap: isSelectable
           ? () {
               if (_selectedStartDate == null || (_selectedStartDate != null && _selectedEndDate != null)) {
-                setState(() {
-                  _selectedStartDate = date;
-                  _selectedEndDate = null;
-                });
+                if (!isPastDate) {
+                  setState(() {
+                    _selectedStartDate = date;
+                    _selectedEndDate = null;
+                  });
+                }
               } else if (_selectedStartDate != null && _selectedEndDate == null) {
                 if (date.isBefore(_selectedStartDate!)) {
-                  setState(() {
-                    _selectedEndDate = _selectedStartDate;
-                    _selectedStartDate = date;
-                  });
+                  if (!isPastDate) {
+                    setState(() {
+                      _selectedEndDate = _selectedStartDate;
+                      _selectedStartDate = date;
+                    });
+                  }
                 } else {
                   setState(() {
                     _selectedEndDate = date;
@@ -801,7 +825,7 @@ class _DatePickerBottomSheetState extends State<DatePickerBottomSheet> {
         ),
         child: Center(
           child: Text(
-            '$day',
+            '${date.day}',
             style: TextStyle(
               fontSize: 14,
               fontWeight: isStartDate || isEndDate ? FontWeight.bold : FontWeight.normal,
@@ -809,9 +833,11 @@ class _DatePickerBottomSheetState extends State<DatePickerBottomSheet> {
                   ? Colors.white
                   : isInRange
                       ? Colors.black
-                      : isCurrentMonth
-                          ? Colors.black
-                          : Colors.grey.shade400,
+                      : isPastDate
+                          ? Colors.grey.shade300
+                          : isCurrentMonth
+                              ? Colors.black
+                              : Colors.grey.shade400,
             ),
           ),
         ),

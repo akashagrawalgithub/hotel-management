@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import '../constants/colors.dart';
+import '../services/hotel_service.dart';
+import '../services/auth_service.dart';
 import 'notification_page.dart';
 import 'hotel_detail_page.dart';
 
 class MyBookingsPage extends StatefulWidget {
-  const MyBookingsPage({super.key});
+  final VoidCallback? onBackPressed;
+  
+  const MyBookingsPage({super.key, this.onBackPressed});
 
   @override
   State<MyBookingsPage> createState() => _MyBookingsPageState();
@@ -15,35 +19,10 @@ class _MyBookingsPageState extends State<MyBookingsPage> with SingleTickerProvid
   final TextEditingController _searchController = TextEditingController();
   int _selectedTabIndex = 0;
 
-  final List<Map<String, dynamic>> _bookings = [
-    {
-      'name': 'Amirtha Homestay',
-      'rating': 4.7,
-      'location': 'Sirangam, tamil nadu',
-      'price': '1220',
-      'dates': '12 - 14 Nov 2025',
-      'guests': '2 Guests (1 Room)',
-      'image': 'assets/images/booking.jpg',
-    },
-    {
-      'name': 'Mystic Palms',
-      'rating': 4.0,
-      'location': 'Palm nagar, Delhi',
-      'price': '930',
-      'dates': '20 - 25 Nov 2025',
-      'guests': '1 Guests (1 Room)',
-      'image': 'assets/images/booking.jpg',
-    },
-    {
-      'name': 'Elysian Suites',
-      'rating': 3.8,
-      'location': 'Sirangam, tamil nadu',
-      'price': '3320',
-      'dates': '27 - 28 Nov 2025',
-      'guests': '2 Guests (1 Room)',
-      'image': 'assets/images/booking.jpg',
-    },
-  ];
+  List<Map<String, dynamic>> _bookings = [];
+  List<Map<String, dynamic>> _historyBookings = [];
+  bool _isLoading = true;
+  bool _isLoadingHistory = true;
 
   @override
   void initState() {
@@ -54,6 +33,104 @@ class _MyBookingsPageState extends State<MyBookingsPage> with SingleTickerProvid
         _selectedTabIndex = _tabController.index;
       });
     });
+    _loadBookings();
+  }
+
+  Future<void> _loadBookings() async {
+    setState(() {
+      _isLoading = true;
+      _isLoadingHistory = true;
+    });
+
+    try {
+      final email = await AuthService.getUserEmail();
+      if (email != null && email.isNotEmpty) {
+        final response = await HotelService.getBookingHistory(email);
+        if (response.data != null && response.data is List) {
+          final bookings = response.data as List;
+          setState(() {
+            _bookings = bookings.map((booking) {
+              final hotel = booking['hotelId'] ?? {};
+              final location = hotel['location'] ?? {};
+              final city = location['city'] ?? '';
+              final state = location['state'] ?? '';
+              final locationString = city.isNotEmpty && state.isNotEmpty
+                  ? '$city, $state'
+                  : city.isNotEmpty
+                      ? city
+                      : state.isNotEmpty
+                          ? state
+                          : 'Location not available';
+
+              final images = hotel['images'] ?? [];
+              final imageUrl = images.isNotEmpty ? images[0] : null;
+
+              final checkIn = booking['checkIn'] != null
+                  ? DateTime.parse(booking['checkIn'])
+                  : null;
+              final checkOut = booking['checkOut'] != null
+                  ? DateTime.parse(booking['checkOut'])
+                  : null;
+
+              String datesString = 'Dates not available';
+              if (checkIn != null && checkOut != null) {
+                final monthNames = [
+                  'Jan',
+                  'Feb',
+                  'Mar',
+                  'Apr',
+                  'May',
+                  'Jun',
+                  'Jul',
+                  'Aug',
+                  'Sep',
+                  'Oct',
+                  'Nov',
+                  'Dec'
+                ];
+                datesString =
+                    '${checkIn.day} - ${checkOut.day} ${monthNames[checkOut.month - 1]} ${checkOut.year}';
+              }
+
+              final guestCount = booking['guestCount'] ?? 1;
+              final roomCount = booking['roomCount'] ?? 1;
+              final guestsString = '$guestCount Guest${guestCount > 1 ? 's' : ''} ($roomCount Room${roomCount > 1 ? 's' : ''})';
+
+              return {
+                'id': booking['_id'] ?? '',
+                'name': hotel['name'] ?? 'Hotel Name',
+                'rating': hotel['rating']?['average'] ?? 0.0,
+                'location': locationString,
+                'price': booking['totalPrice']?.toString() ?? '0',
+                'dates': datesString,
+                'guests': guestsString,
+                'image': imageUrl ?? 'assets/images/booking.jpg',
+                'hotelData': hotel,
+                'bookingData': booking,
+              };
+            }).toList();
+            _historyBookings = List.from(_bookings);
+            _isLoading = false;
+            _isLoadingHistory = false;
+          });
+        } else {
+          setState(() {
+            _isLoading = false;
+            _isLoadingHistory = false;
+          });
+        }
+      } else {
+        setState(() {
+          _isLoading = false;
+          _isLoadingHistory = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _isLoadingHistory = false;
+      });
+    }
   }
 
   @override
@@ -98,7 +175,13 @@ class _MyBookingsPageState extends State<MyBookingsPage> with SingleTickerProvid
         ),
         child: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            if (widget.onBackPressed != null) {
+              widget.onBackPressed!();
+            } else if (Navigator.of(context).canPop()) {
+              Navigator.pop(context);
+            }
+          },
         ),
       ),
       title: const Text(
@@ -225,6 +308,12 @@ class _MyBookingsPageState extends State<MyBookingsPage> with SingleTickerProvid
   }
 
   Widget _buildBookingsList() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_bookings.isEmpty) {
+      return const Center(child: Text('No bookings found'));
+    }
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       itemCount: _bookings.length,
@@ -235,22 +324,40 @@ class _MyBookingsPageState extends State<MyBookingsPage> with SingleTickerProvid
   }
 
   Widget _buildHistoryList() {
+    if (_isLoadingHistory) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_historyBookings.isEmpty) {
+      return const Center(child: Text('No booking history found'));
+    }
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      itemCount: _bookings.length,
+      itemCount: _historyBookings.length,
       itemBuilder: (context, index) {
-        return _buildBookingCard(_bookings[index]);
+        return _buildBookingCard(_historyBookings[index]);
       },
     );
   }
 
   Widget _buildBookingCard(Map<String, dynamic> booking) {
+    final hotelData = booking['hotelData'] ?? {};
     return GestureDetector(
       onTap: () {
+        final hotelForDetail = {
+          'id': hotelData['_id'] ?? booking['id'] ?? '',
+          'name': hotelData['name'] ?? booking['name'] ?? 'Hotel Name',
+          'location': booking['location'] ?? 'Location not available',
+          'price': booking['price'] ?? '0',
+          'rating': hotelData['rating']?['average'] ?? booking['rating'] ?? 0.0,
+          'image': booking['image'] ?? 'assets/images/booking.jpg',
+          'description': hotelData['description'] ?? '',
+          'amenities': hotelData['amenities'] ?? [],
+          'hotelData': hotelData,
+        };
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => HotelDetailPage(hotel: booking),
+            builder: (context) => HotelDetailPage(hotel: hotelForDetail),
           ),
         );
       },
@@ -276,11 +383,24 @@ class _MyBookingsPageState extends State<MyBookingsPage> with SingleTickerProvid
                 topLeft: Radius.circular(15),
                 bottomLeft: Radius.circular(15),
               ),
-              child: Image.asset(
-                booking['image'],
-                width: 120,
-                fit: BoxFit.cover,
-              ),
+              child: booking['image'].toString().startsWith('http')
+                  ? Image.network(
+                      booking['image'],
+                      width: 120,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Image.asset(
+                          'assets/images/booking.jpg',
+                          width: 120,
+                          fit: BoxFit.cover,
+                        );
+                      },
+                    )
+                  : Image.asset(
+                      booking['image'] ?? 'assets/images/booking.jpg',
+                      width: 120,
+                      fit: BoxFit.cover,
+                    ),
             ),
           Expanded(
             child: Padding(

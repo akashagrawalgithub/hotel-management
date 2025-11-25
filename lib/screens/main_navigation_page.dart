@@ -16,12 +16,24 @@ class MainNavigationPage extends StatefulWidget {
 class _MainNavigationPageState extends State<MainNavigationPage> {
   int _currentIndex = 0;
 
-  final List<Widget> _pages = [
+  List<Widget> get _pages => [
     const HomePage(),
-    const FindPage(),
+    FindPage(onBackPressed: () {
+      setState(() {
+        _currentIndex = 0;
+      });
+    }),
     const FavoritesPage(),
-    const MyBookingsPage(),
-    const SettingsPage(),
+    MyBookingsPage(onBackPressed: () {
+      setState(() {
+        _currentIndex = 0;
+      });
+    }),
+    SettingsPage(onBackPressed: () {
+      setState(() {
+        _currentIndex = 0;
+      });
+    }),
   ];
 
   void _onItemTapped(int index) {

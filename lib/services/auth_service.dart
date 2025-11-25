@@ -21,6 +21,10 @@ class AuthService {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
+      validateStatus: (status) {
+        // Don't throw exception for status codes < 500
+        return status! < 500;
+      },
     ),
   );
 
@@ -42,6 +46,19 @@ class AuthService {
         onError: (error, handler) async {
           if (error.response?.statusCode == 401) {
             await clearToken();
+          }
+          // Handle 400 errors with better messages
+          if (error.response?.statusCode == 400) {
+            final isLoginRequest = error.requestOptions.path.contains('/login');
+            final errorMessage = _extractErrorMessage(error.response?.data, isLogin: isLoginRequest);
+            return handler.reject(
+              DioException(
+                requestOptions: error.requestOptions,
+                response: error.response,
+                type: DioExceptionType.badResponse,
+                error: errorMessage,
+              ),
+            );
           }
           return handler.next(error);
         },
@@ -135,8 +152,50 @@ class AuthService {
 
   // Check if user is authenticated
   static Future<bool> isAuthenticated() async {
-    final token = await getToken();
-    return token != null && token.isNotEmpty;
+    final userId = await getUserId();
+    return userId != null && userId.isNotEmpty;
+  }
+
+  // Extract error message from response
+  static String _extractErrorMessage(dynamic responseData, {bool isLogin = false}) {
+    if (responseData == null) return 'An error occurred';
+    
+    if (responseData is Map) {
+      String? message;
+      
+      // Try common error message fields
+      if (responseData['message'] != null) {
+        message = responseData['message'].toString();
+      } else if (responseData['error'] != null) {
+        message = responseData['error'].toString();
+      } else if (responseData['msg'] != null) {
+        message = responseData['msg'].toString();
+      }
+      
+      // For login errors, show user-friendly message
+      if (isLogin && message != null) {
+        if (message.toLowerCase().contains('User not found') || 
+            message.toLowerCase().contains('invalid') ||
+            message.toLowerCase().contains('incorrect')) {
+          return 'Wrong email or Password';
+        }
+      }
+      
+      if (message != null) {
+        return message;
+      }
+      
+      // Check for validation errors
+      if (responseData['errors'] != null) {
+        final errors = responseData['errors'];
+        if (errors is Map) {
+          final errorList = errors.values.expand((e) => e is List ? e : [e]).toList();
+          return errorList.join(', ');
+        }
+      }
+    }
+    
+    return 'Bad request. Please check your input and try again.';
   }
 
   // Signup API call
@@ -158,6 +217,17 @@ class AuthService {
         },
       );
 
+      // Check for error status codes
+      if (response.statusCode == 400) {
+        final errorMessage = _extractErrorMessage(response.data);
+        throw DioException(
+          requestOptions: RequestOptions(path: '/auth/signup'),
+          response: response,
+          type: DioExceptionType.badResponse,
+          error: errorMessage,
+        );
+      }
+
       if (response.data['token'] != null) {
         await saveToken(response.data['token']);
       }
@@ -165,14 +235,18 @@ class AuthService {
       if (response.data['user'] != null) {
         final user = response.data['user'];
         await saveUserData(
-          userId: user['_id'] ?? '',
-          name: user['name'] ?? '',
-          email: user['email'] ?? '',
+          userId: user['_id']?.toString() ?? '',
+          name: user['name']?.toString() ?? user['username']?.toString() ?? '',
+          email: user['email']?.toString() ?? '',
         );
       }
 
       return response;
     } catch (e) {
+      if (e is DioException && e.response?.statusCode == 400) {
+        final errorMessage = _extractErrorMessage(e.response?.data);
+        throw Exception(errorMessage);
+      }
       rethrow;
     }
   }
@@ -186,6 +260,17 @@ class AuthService {
         data: {'email': email, 'password': password},
       );
 
+      // Check for error status codes
+      if (response.statusCode == 400) {
+        final errorMessage = _extractErrorMessage(response.data, isLogin: true);
+        throw DioException(
+          requestOptions: RequestOptions(path: '/auth/login'),
+          response: response,
+          type: DioExceptionType.badResponse,
+          error: errorMessage,
+        );
+      }
+
       if (response.data['token'] != null) {
         await saveToken(response.data['token']);
       }
@@ -193,14 +278,18 @@ class AuthService {
       if (response.data['user'] != null) {
         final user = response.data['user'];
         await saveUserData(
-          userId: user['_id'] ?? '',
-          name: user['name'] ?? '',
-          email: user['email'] ?? '',
+          userId: user['_id']?.toString() ?? '',
+          name: user['name']?.toString() ?? user['username']?.toString() ?? '',
+          email: user['email']?.toString() ?? '',
         );
       }
 
       return response;
     } catch (e) {
+      if (e is DioException && e.response?.statusCode == 400) {
+        final errorMessage = _extractErrorMessage(e.response?.data);
+        throw Exception(errorMessage);
+      }
       rethrow;
     }
   }

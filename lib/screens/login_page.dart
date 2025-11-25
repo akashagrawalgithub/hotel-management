@@ -61,15 +61,6 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
           ),
-          if (_isLoading)
-            Container(
-              color: Colors.black.withOpacity(0.5),
-              child: const Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.red),
-                ),
-              ),
-            ),
         ],
       ),
     );
@@ -134,15 +125,6 @@ class _LoginPageState extends State<LoginPage> {
       child: TextFormField(
         controller: _emailController,
         keyboardType: TextInputType.emailAddress,
-        validator: (value) {
-          if (value == null || value.isEmpty) {
-            return 'Please enter your email';
-          }
-          if (!value.contains('@')) {
-            return 'Please enter a valid email';
-          }
-          return null;
-        },
         decoration: InputDecoration(
           hintText: 'Enter your email',
           hintStyle: TextStyle(color: Colors.grey.shade400),
@@ -166,12 +148,6 @@ class _LoginPageState extends State<LoginPage> {
       child: TextFormField(
         controller: _passwordController,
         obscureText: _obscurePassword,
-        validator: (value) {
-          if (value == null || value.isEmpty) {
-            return 'Please enter your password';
-          }
-          return null;
-        },
         decoration: InputDecoration(
           hintText: 'Enter your password',
           hintStyle: TextStyle(color: Colors.grey.shade400),
@@ -247,7 +223,17 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _handleLogin() async {
-    if (!_formKey.currentState!.validate()) {
+    // Manual validation with snackbar
+    if (_emailController.text.trim().isEmpty) {
+      _showSnackBar('Please enter your email');
+      return;
+    }
+    if (!_emailController.text.trim().contains('@')) {
+      _showSnackBar('Please enter a valid email');
+      return;
+    }
+    if (_passwordController.text.isEmpty) {
+      _showSnackBar('Please enter your password');
       return;
     }
 
@@ -269,7 +255,7 @@ class _LoginPageState extends State<LoginPage> {
       }
     } catch (e) {
       if (mounted) {
-        _showErrorDialog(e.toString().replaceAll('Exception: ', ''));
+        _showSnackBar(e.toString().replaceAll('Exception: ', ''));
       }
     } finally {
       if (mounted) {
@@ -278,6 +264,21 @@ class _LoginPageState extends State<LoginPage> {
         });
       }
     }
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.red,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
 
   void _showErrorDialog(String message) {

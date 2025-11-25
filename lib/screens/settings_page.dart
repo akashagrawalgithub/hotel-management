@@ -8,9 +8,12 @@ import 'contact_us_page.dart';
 import 'personal_info_page.dart';
 import 'notification_page.dart';
 import 'login_page.dart';
+import 'main_navigation_page.dart';
 
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({super.key});
+  final VoidCallback? onBackPressed;
+  
+  const SettingsPage({super.key, this.onBackPressed});
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -73,7 +76,13 @@ class _SettingsPageState extends State<SettingsPage> {
       child: Row(
         children: [
           GestureDetector(
-            onTap: () => Navigator.pop(context),
+            onTap: () {
+              if (widget.onBackPressed != null) {
+                widget.onBackPressed!();
+              } else if (Navigator.of(context).canPop()) {
+                Navigator.pop(context);
+              }
+            },
             child: Row(
               children: [
                 Container(

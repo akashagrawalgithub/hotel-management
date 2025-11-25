@@ -21,8 +21,8 @@ class _SplashScreenState extends State<SplashScreen> {
   _navigateToHome() async {
     await Future.delayed(const Duration(seconds: 3));
     if (mounted) {
-      final isAuthenticated = await AuthService.isAuthenticated();
-      if (isAuthenticated) {
+      final userId = await AuthService.getUserId();
+      if (userId != null && userId.isNotEmpty) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const MainNavigationPage()),
