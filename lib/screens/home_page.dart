@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../constants/colors.dart';
 import '../services/auth_service.dart';
 import '../services/hotel_service.dart';
+import '../l10n/app_localizations.dart';
 import 'hotel_detail_page.dart';
 import 'search_results_page.dart';
 import 'checkout_page.dart' show DatePickerBottomSheet;
@@ -68,7 +69,15 @@ class _HomePageState extends State<HomePage> {
                         : 'Location not available';
 
             final images = hotel['images'] ?? [];
-            final imageUrl = images.isNotEmpty ? images[0] : null;
+            String? imageUrl;
+            if (images.isNotEmpty) {
+              final firstImage = images[0];
+              if (firstImage is String) {
+                imageUrl = firstImage;
+              } else if (firstImage is Map && firstImage['url'] != null) {
+                imageUrl = firstImage['url'].toString();
+              }
+            }
 
             return {
               'id': hotel['_id'] ?? '',
@@ -164,7 +173,7 @@ class _HomePageState extends State<HomePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Hey ${_userName ?? 'User'} 👋',
+                    '${AppLocalizations.of(context)?.hey ?? 'Hey'} ${_userName ?? 'User'} 👋',
                     style: TextStyle(
                       color: AppColors.gradientStart,
                       fontSize: 16,
@@ -172,9 +181,9 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    "Let's start your journey!",
-                    style: TextStyle(
+                  Text(
+                    AppLocalizations.of(context)?.letsStartJourney ?? "Let's start your journey!",
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
@@ -248,9 +257,9 @@ class _HomePageState extends State<HomePage> {
                         valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF8B4513)),
                       ),
                     )
-                  : const Text(
-                      'Search',
-                      style: TextStyle(
+                  : Text(
+                      AppLocalizations.of(context)?.search ?? 'Search',
+                      style: const TextStyle(
                         color: Color(0xFF8B4513),
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -269,9 +278,9 @@ class _HomePageState extends State<HomePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Location',
-          style: TextStyle(
+        Text(
+          AppLocalizations.of(context)?.location ?? 'Location',
+          style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
             color: Colors.black87,
@@ -293,7 +302,7 @@ class _HomePageState extends State<HomePage> {
                 child: TextField(
                   controller: _locationController,
                   decoration: InputDecoration(
-                    hintText: 'Enter your destination',
+                    hintText: AppLocalizations.of(context)?.enterYourDestination ?? 'Enter your destination',
                     hintStyle: TextStyle(
                       color: Colors.grey.shade600,
                       fontSize: 14,
@@ -319,9 +328,9 @@ class _HomePageState extends State<HomePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Date',
-          style: TextStyle(
+        Text(
+          AppLocalizations.of(context)?.date ?? 'Date',
+          style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
             color: Colors.black87,
@@ -349,7 +358,7 @@ class _HomePageState extends State<HomePage> {
                             ? '${_getMonthName(_checkInDate!.month)} ${_checkInDate!.day}, ${_checkInDate!.year}'
                             : _selectedDate != null
                                 ? '${_getMonthName(_selectedDate!.month)} ${_selectedDate!.day}, ${_selectedDate!.year}'
-                                : 'Select Date',
+                                : AppLocalizations.of(context)?.selectDate ?? 'Select Date',
                     style: TextStyle(
                       color: (_checkInDate != null || _selectedDate != null) ? Colors.black87 : Colors.grey.shade600,
                       fontSize: 14,
@@ -368,9 +377,9 @@ class _HomePageState extends State<HomePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Guest',
-          style: TextStyle(
+        Text(
+          AppLocalizations.of(context)?.guest ?? 'Guest',
+          style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
             color: Colors.black87,
@@ -396,7 +405,7 @@ class _HomePageState extends State<HomePage> {
                     FilteringTextInputFormatter.digitsOnly,
                   ],
                   decoration: InputDecoration(
-                    hintText: 'Add guest',
+                    hintText: AppLocalizations.of(context)?.addGuest ?? 'Add guest',
                     hintStyle: TextStyle(
                       color: Colors.grey.shade600,
                       fontSize: 14,
@@ -556,6 +565,77 @@ class _HomePageState extends State<HomePage> {
     return months[month - 1];
   }
 
+  String _getLocalizedFilter(String filter) {
+    final localizations = AppLocalizations.of(context);
+    switch (filter) {
+      case 'All':
+        return localizations?.all ?? 'All';
+      case 'AC Room':
+        return localizations?.acRoom ?? 'AC Room';
+      case '4 Stars':
+        return localizations?.fourStars ?? '4 Stars';
+      case 'Near Me':
+        return localizations?.nearMe ?? 'Near Me';
+      case 'Mans':
+        return localizations?.mans ?? 'Mans';
+      case 'Luxury':
+        return localizations?.luxury ?? 'Luxury';
+      case 'Budget':
+        return localizations?.budget ?? 'Budget';
+      default:
+        return filter;
+    }
+  }
+
+  Widget _getImageWidget(dynamic imageData) {
+    String imagePath = 'assets/images/sri.jpg';
+    
+    if (imageData != null) {
+      if (imageData is String) {
+        imagePath = imageData;
+      } else if (imageData is Map) {
+        imagePath = imageData['url']?.toString() ?? 
+                   imageData['image']?.toString() ?? 
+                   imageData['src']?.toString() ?? 
+                   'assets/images/sri.jpg';
+      } else {
+        imagePath = imageData.toString();
+      }
+    }
+
+    if (imagePath.startsWith('http') || imagePath.startsWith('https')) {
+      return Image.network(
+        imagePath,
+        width: double.infinity,
+        height: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Image.asset(
+            'assets/images/sri.jpg',
+            width: double.infinity,
+            height: double.infinity,
+            fit: BoxFit.cover,
+          );
+        },
+      );
+    } else {
+      return Image.asset(
+        imagePath,
+        width: double.infinity,
+        height: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Image.asset(
+            'assets/images/sri.jpg',
+            width: double.infinity,
+            height: double.infinity,
+            fit: BoxFit.cover,
+          );
+        },
+      );
+    }
+  }
+
   Widget _buildFilterButtons() {
     return SizedBox(
       height: 40,
@@ -579,7 +659,7 @@ class _HomePageState extends State<HomePage> {
               ),
               child: Center(
                 child: Text(
-                  _filters[index],
+                  _getLocalizedFilter(_filters[index]),
                   style: TextStyle(
                     color: isSelected ? Colors.white : Colors.black,
                     fontSize: 14,
@@ -603,9 +683,9 @@ class _HomePageState extends State<HomePage> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Hotel Near You',
-                style: TextStyle(
+              Text(
+                AppLocalizations.of(context)?.hotelNearYou ?? 'Hotel Near You',
+                style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
@@ -661,7 +741,7 @@ class _HomePageState extends State<HomePage> {
           child: _isLoadingHotels
               ? const Center(child: CircularProgressIndicator())
               : _hotels.isEmpty
-                  ? const Center(child: Text('No hotels available'))
+                  ? Center(child: Text(AppLocalizations.of(context)?.noHotelsAvailable ?? 'No hotels available'))
                   : ListView.builder(
                       controller: _scrollController,
                       scrollDirection: Axis.horizontal,
@@ -703,27 +783,7 @@ class _HomePageState extends State<HomePage> {
           borderRadius: BorderRadius.circular(20),
           child: Stack(
           children: [
-            hotel['image'].toString().startsWith('http')
-                ? Image.network(
-                    hotel['image'],
-                    width: double.infinity,
-                    height: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Image.asset(
-                        'assets/images/sri.jpg',
-                        width: double.infinity,
-                        height: double.infinity,
-                        fit: BoxFit.cover,
-                      );
-                    },
-                  )
-                : Image.asset(
-                    hotel['image'] ?? 'assets/images/sri.jpg',
-                    width: double.infinity,
-                    height: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
+            _getImageWidget(hotel['image']),
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(

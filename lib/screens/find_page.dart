@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/colors.dart';
 import '../services/hotel_service.dart';
+import '../l10n/app_localizations.dart';
 import 'notification_page.dart';
 import 'hotel_detail_page.dart';
 
@@ -54,10 +55,18 @@ class _FindPageState extends State<FindPage> {
                 ? city
                 : state.isNotEmpty
                 ? state
-                : 'Location not available';
+                          : AppLocalizations.of(context)?.locationNotAvailable ?? 'Location not available';
 
             final images = hotel['images'] ?? [];
-            final imageUrl = images.isNotEmpty ? images[0] : null;
+            String? imageUrl;
+            if (images.isNotEmpty) {
+              final firstImage = images[0];
+              if (firstImage is String) {
+                imageUrl = firstImage;
+              } else if (firstImage is Map && firstImage['url'] != null) {
+                imageUrl = firstImage['url'].toString();
+              }
+            }
 
             return {
               'id': hotel['_id'] ?? '',
@@ -148,9 +157,9 @@ class _FindPageState extends State<FindPage> {
                 ),
               ),
               const SizedBox(width: 10),
-              const Text(
-                'Search',
-                style: TextStyle(
+              Text(
+                AppLocalizations.of(context)?.search ?? 'Search',
+                style: const TextStyle(
                   color: Colors.black,
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
@@ -197,7 +206,7 @@ class _FindPageState extends State<FindPage> {
       child: TextField(
         controller: _searchController,
         decoration: InputDecoration(
-          hintText: 'Find your space',
+          hintText: AppLocalizations.of(context)?.findYourSpace ?? 'Find your space',
           hintStyle: TextStyle(color: Colors.grey.shade600),
           border: InputBorder.none,
           suffixIcon: _searchController.text.isNotEmpty
@@ -224,9 +233,9 @@ class _FindPageState extends State<FindPage> {
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-          child: const Text(
-            'Best match for you',
-            style: TextStyle(
+          child: Text(
+            AppLocalizations.of(context)?.bestMatchForYou ?? 'Best match for you',
+            style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
               color: Colors.black,
@@ -239,12 +248,12 @@ class _FindPageState extends State<FindPage> {
             child: Center(child: CircularProgressIndicator()),
           )
         else if (_bestMatches.isEmpty)
-          const Padding(
-            padding: EdgeInsets.all(20.0),
+          Padding(
+            padding: const EdgeInsets.all(20.0),
             child: Center(
               child: Text(
-                'No hotels available',
-                style: TextStyle(color: Colors.grey),
+                AppLocalizations.of(context)?.noHotelsAvailable ?? 'No hotels available',
+                style: const TextStyle(color: Colors.grey),
               ),
             ),
           )
@@ -260,6 +269,59 @@ class _FindPageState extends State<FindPage> {
           ),
       ],
     );
+  }
+
+  Widget _getImageWidget(dynamic imageData, {double? width, double? height}) {
+    String imagePath = 'assets/images/booking.jpg';
+    
+    if (imageData != null) {
+      if (imageData is String) {
+        imagePath = imageData;
+      } else if (imageData is Map) {
+        imagePath = imageData['url']?.toString() ?? 
+                   imageData['image']?.toString() ?? 
+                   imageData['src']?.toString() ?? 
+                   'assets/images/booking.jpg';
+      } else {
+        imagePath = imageData.toString();
+      }
+    }
+
+    if (imagePath.startsWith('http') || imagePath.startsWith('https')) {
+      return Image.network(
+        imagePath,
+        width: width,
+        height: height,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Image.asset(
+            'assets/images/booking.jpg',
+            width: width,
+            height: height,
+            fit: BoxFit.cover,
+          );
+        },
+      );
+    } else {
+      return Image.asset(
+        imagePath,
+        width: width,
+        height: height,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            width: width,
+            height: height,
+            color: Colors.grey.shade300,
+            child: const Icon(
+              Icons.hotel,
+              size: 40,
+              color: Colors.grey,
+            ),
+          );
+        },
+      );
+    }
   }
 
   Widget _buildBestMatchCard(Map<String, dynamic> hotel) {
@@ -293,41 +355,7 @@ class _FindPageState extends State<FindPage> {
                 topLeft: Radius.circular(15),
                 bottomLeft: Radius.circular(15),
               ),
-              child:
-                  hotel['image'] != null &&
-                      hotel['image'].toString().startsWith('http')
-                  ? Image.network(
-                      hotel['image'],
-                      width: 100,
-                      height: 130,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Image.asset(
-                          'assets/images/booking.jpg',
-                          width: 100,
-                          height: 130,
-                          fit: BoxFit.cover,
-                        );
-                      },
-                    )
-                  : Image.asset(
-                      hotel['image'] ?? 'assets/images/booking.jpg',
-                      width: 100,
-                      height: 130,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          width: 100,
-                          height: 130,
-                          color: Colors.grey.shade300,
-                          child: const Icon(
-                            Icons.hotel,
-                            size: 40,
-                            color: Colors.grey,
-                          ),
-                        );
-                      },
-                    ),
+              child: _getImageWidget(hotel['image'], width: 100, height: 130),
             ),
             Expanded(
               child: Padding(
@@ -428,9 +456,9 @@ class _FindPageState extends State<FindPage> {
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-          child: const Text(
-            'Recommended for You',
-            style: TextStyle(
+          child: Text(
+            AppLocalizations.of(context)?.recommendedForYou ?? 'Recommended for You',
+            style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
               color: Colors.black,
@@ -480,27 +508,7 @@ class _FindPageState extends State<FindPage> {
           borderRadius: BorderRadius.circular(20),
           child: Stack(
             children: [
-              hotel['image'].toString().startsWith('http')
-                  ? Image.network(
-                      hotel['image'],
-                      width: double.infinity,
-                      height: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Image.asset(
-                          'assets/images/sri.jpg',
-                          width: double.infinity,
-                          height: double.infinity,
-                          fit: BoxFit.cover,
-                        );
-                      },
-                    )
-                  : Image.asset(
-                      hotel['image'] ?? 'assets/images/sri.jpg',
-                      width: double.infinity,
-                      height: double.infinity,
-                      fit: BoxFit.cover,
-                    ),
+              _getImageWidget(hotel['image']),
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(

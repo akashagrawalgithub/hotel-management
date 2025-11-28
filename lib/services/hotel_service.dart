@@ -42,6 +42,17 @@ class HotelService {
     _interceptorsInitialized = true;
   }
 
+  // Get notifications for user
+  static Future<Response> getNotifications(String userId) async {
+    try {
+      _setupInterceptors();
+      final response = await _dio.get('/notification/$userId');
+      return response;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   // Get random hotels
   static Future<Response> getRandomHotels() async {
     try {

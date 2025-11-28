@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/colors.dart';
+import '../l10n/app_localizations.dart';
 import 'checkout_page.dart';
 
 class BookingSelectionPage extends StatefulWidget {
@@ -87,9 +88,9 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      title: const Text(
-        'Booking',
-        style: TextStyle(
+      title: Text(
+        AppLocalizations.of(context)?.booking ?? 'Booking',
+        style: const TextStyle(
           color: Colors.black,
           fontSize: 20,
           fontWeight: FontWeight.bold,
@@ -161,7 +162,7 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      '549 reviews',
+                      '549 ${AppLocalizations.of(context)?.reviews ?? 'reviews'}',
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey.shade600,
@@ -183,9 +184,9 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Date',
-            style: TextStyle(
+          Text(
+            AppLocalizations.of(context)?.date ?? 'Date',
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: Colors.black,
@@ -207,9 +208,9 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
                       children: [
                         const Icon(Icons.calendar_today, color: AppColors.red, size: 24),
                         const SizedBox(height: 8),
-                        const Text(
-                          'Check - In',
-                          style: TextStyle(
+                        Text(
+                          AppLocalizations.of(context)?.checkIn ?? 'Check - In',
+                          style: const TextStyle(
                             fontSize: 12,
                             color: Colors.grey,
                           ),
@@ -218,7 +219,7 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
                         Text(
                           _checkInDate != null
                               ? '${_getMonthName(_checkInDate!.month)} ${_checkInDate!.day}, ${_checkInDate!.year}'
-                              : 'Select',
+                              : AppLocalizations.of(context)?.selectDate ?? 'Select',
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
@@ -244,9 +245,9 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
                       children: [
                         const Icon(Icons.calendar_today, color: AppColors.red, size: 24),
                         const SizedBox(height: 8),
-                        const Text(
-                          'Check - Out',
-                          style: TextStyle(
+                        Text(
+                          AppLocalizations.of(context)?.checkOut ?? 'Check - Out',
+                          style: const TextStyle(
                             fontSize: 12,
                             color: Colors.grey,
                           ),
@@ -255,7 +256,7 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
                         Text(
                           _checkOutDate != null
                               ? '${_getMonthName(_checkOutDate!.month)} ${_checkOutDate!.day}, ${_checkOutDate!.year}'
-                              : 'Select',
+                              : AppLocalizations.of(context)?.selectDate ?? 'Select',
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
@@ -280,9 +281,9 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Guest',
-            style: TextStyle(
+          Text(
+            AppLocalizations.of(context)?.guest ?? 'Guest',
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: Colors.black,
@@ -292,9 +293,9 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Number of Guests',
-                style: TextStyle(
+              Text(
+                AppLocalizations.of(context)?.numberOfGuests ?? 'Number of Guests',
+                style: const TextStyle(
                   fontSize: 14,
                   color: Colors.black,
                 ),
@@ -441,29 +442,29 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Payment Details',
-            style: TextStyle(
+          Text(
+            AppLocalizations.of(context)?.paymentDetails ?? 'Payment Details',
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: Colors.black,
             ),
           ),
           const SizedBox(height: 15),
-          _buildPriceItem('Total : $_nights Night', 'Rs ${(_pricePerNight * _nights).toStringAsFixed(0)}'),
+          _buildPriceItem('${AppLocalizations.of(context)?.total ?? 'Total'} : $_nights ${AppLocalizations.of(context)?.nightWord ?? 'Night'}', 'Rs ${(_pricePerNight * _nights).toStringAsFixed(0)}'),
           const SizedBox(height: 10),
-          _buildPriceItem('Cleaning Fee', 'Rs 15'),
+          _buildPriceItem(AppLocalizations.of(context)?.cleaningFee ?? 'Cleaning Fee', 'Rs 15'),
           const SizedBox(height: 10),
-          _buildPriceItem('Service Fee', 'Rs 40'),
+          _buildPriceItem(AppLocalizations.of(context)?.serviceFee ?? 'Service Fee', 'Rs 40'),
           const SizedBox(height: 10),
-          _buildPriceItem('Discount', 'Rs ${_selectedCoupon != null ? '100' : '0'}'),
+          _buildPriceItem(AppLocalizations.of(context)?.discount ?? 'Discount', 'Rs ${_selectedCoupon != null ? '100' : '0'}'),
           const Divider(height: 30),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Total Payment:',
-                style: TextStyle(
+              Text(
+                AppLocalizations.of(context)?.totalPayment ?? 'Total Payment:',
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
@@ -516,9 +517,9 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
             children: [
               const Icon(Icons.person, color: AppColors.red, size: 20),
               const SizedBox(width: 8),
-              const Text(
-                'Guest Information',
-                style: TextStyle(
+              Text(
+                AppLocalizations.of(context)?.guestInformation ?? 'Guest Information',
+                style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
@@ -527,11 +528,11 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
             ],
           ),
           const SizedBox(height: 15),
-          _buildInputField('Full Name'),
+          _buildInputField(AppLocalizations.of(context)?.fullName ?? 'Full Name'),
           const SizedBox(height: 15),
-          _buildInputField('Email'),
+          _buildInputField(AppLocalizations.of(context)?.email ?? 'Email'),
           const SizedBox(height: 15),
-          _buildInputField('Phone Number'),
+          _buildInputField(AppLocalizations.of(context)?.phoneNumber ?? 'Phone Number'),
         ],
       ),
     );
@@ -580,7 +581,7 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Total price',
+                  AppLocalizations.of(context)?.totalPrice ?? 'Total price',
                   style: TextStyle(
                     fontSize: 12,
                     color: AppColors.red,
@@ -624,9 +625,9 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
                   borderRadius: BorderRadius.circular(20),
                 ),
               ),
-              child: const Text(
-                'Check Out',
-                style: TextStyle(
+              child: Text(
+                AppLocalizations.of(context)?.checkOut ?? 'Check Out',
+                style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                 ),

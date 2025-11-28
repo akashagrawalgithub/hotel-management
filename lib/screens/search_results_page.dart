@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/colors.dart';
+import '../l10n/app_localizations.dart';
 import 'hotel_detail_page.dart';
 
 class SearchResultsPage extends StatefulWidget {
@@ -36,7 +37,7 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
           ),
         ),
         title: Text(
-          'Search Results',
+          AppLocalizations.of(context)?.searchResults ?? 'Search Results',
           style: const TextStyle(
             color: Colors.black,
             fontSize: 20,
@@ -53,7 +54,7 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   child: Text(
-                    '${widget.searchResults.length} result${widget.searchResults.length != 1 ? 's' : ''} found',
+                    '${widget.searchResults.length} ${widget.searchResults.length != 1 ? (AppLocalizations.of(context)?.resultsFoundPlural ?? 'results') : (AppLocalizations.of(context)?.resultsFound ?? 'result')} ${AppLocalizations.of(context)?.found ?? 'found'}',
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey.shade600,
@@ -86,7 +87,7 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
           ),
           const SizedBox(height: 20),
           Text(
-            "We don't have any data",
+            AppLocalizations.of(context)?.noData ?? "We don't have any data",
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -95,7 +96,7 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Try adjusting your search criteria',
+            AppLocalizations.of(context)?.tryAdjustingSearch ?? 'Try adjusting your search criteria',
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey.shade600,

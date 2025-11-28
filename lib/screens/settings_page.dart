@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/colors.dart';
 import '../services/auth_service.dart';
+import '../l10n/app_localizations.dart';
 import 'help_support_page.dart';
 import 'about_us_page.dart';
 import 'security_privacy_page.dart';
@@ -9,6 +10,7 @@ import 'personal_info_page.dart';
 import 'notification_page.dart';
 import 'login_page.dart';
 import 'main_navigation_page.dart';
+import 'language_selection_page.dart';
 
 class SettingsPage extends StatefulWidget {
   final VoidCallback? onBackPressed;
@@ -99,9 +101,9 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                const Text(
-                  'Profile',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                Text(
+                  AppLocalizations.of(context)?.profile ?? 'Profile',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                 ),
               ],
             ),
@@ -172,17 +174,17 @@ class _SettingsPageState extends State<SettingsPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Setting',
-          style: TextStyle(
+        Text(
+          AppLocalizations.of(context)?.setting ?? 'Setting',
+          style: const TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
             color: AppColors.red,
           ),
         ),
         const SizedBox(height: 16),
-        _buildSettingItem(Icons.credit_card, 'Your Card', null),
-        _buildSettingItem(Icons.security, 'Security & Privacy', () {
+        _buildSettingItem(Icons.credit_card, AppLocalizations.of(context)?.yourCard ?? 'Your Card', null),
+        _buildSettingItem(Icons.security, AppLocalizations.of(context)?.securityPrivacy ?? 'Security & Privacy', () {
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -190,26 +192,31 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           );
         }),
-        _buildSettingItem(Icons.info_outline, 'About Us', () {
+        _buildSettingItem(Icons.info_outline, AppLocalizations.of(context)?.aboutUs ?? 'About Us', () {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const AboutUsPage()),
           );
         }),
-        _buildSettingItem(Icons.notifications_outlined, 'Notification', () {
+        _buildSettingItem(Icons.notifications_outlined, AppLocalizations.of(context)?.notification ?? 'Notification', () {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const NotificationPage()),
           );
         }),
-        _buildSettingItem(Icons.language, 'Languages', null),
-        _buildSettingItem(Icons.help_outline, 'Help and Support', () {
+        _buildSettingItem(Icons.language, AppLocalizations.of(context)?.languages ?? 'Languages', () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const LanguageSelectionPage()),
+          );
+        }),
+        _buildSettingItem(Icons.help_outline, AppLocalizations.of(context)?.helpSupport ?? 'Help and Support', () {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const HelpSupportPage()),
           );
         }),
-        _buildSettingItem(Icons.phone, 'Contact Us', () {
+        _buildSettingItem(Icons.phone, AppLocalizations.of(context)?.contactUs ?? 'Contact Us', () {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const ContactUsPage()),
@@ -254,9 +261,9 @@ class _SettingsPageState extends State<SettingsPage> {
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
-        child: const Text(
-          'Logout',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        child: Text(
+          AppLocalizations.of(context)?.logout ?? 'Logout',
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
       ),
     );
@@ -298,9 +305,9 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                const Text(
-                  'Are You Sure?',
-                  style: TextStyle(
+                Text(
+                  AppLocalizations.of(context)?.areYouSure ?? 'Are You Sure?',
+                  style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: Colors.black,
@@ -308,7 +315,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Do you want to log out ?',
+                  AppLocalizations.of(context)?.doYouWantToLogOut ?? 'Do you want to log out ?',
                   style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
                 ),
                 const SizedBox(height: 24),
@@ -352,9 +359,9 @@ class _SettingsPageState extends State<SettingsPage> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        child: const Text(
-                          'Log Out',
-                          style: TextStyle(
+                        child: Text(
+                          AppLocalizations.of(context)?.logOut ?? 'Log Out',
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w500,
                           ),
@@ -375,9 +382,9 @@ class _SettingsPageState extends State<SettingsPage> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        child: const Text(
-                          'Cancel',
-                          style: TextStyle(
+                        child: Text(
+                          AppLocalizations.of(context)?.cancel ?? 'Cancel',
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w500,
                           ),

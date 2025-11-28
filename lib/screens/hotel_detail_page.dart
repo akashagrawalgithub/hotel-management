@@ -91,7 +91,15 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
                         : 'Location not available';
 
             final images = hotel['images'] ?? [];
-            final imageUrl = images.isNotEmpty ? images[0] : null;
+            String? imageUrl;
+            if (images.isNotEmpty) {
+              final firstImage = images[0];
+              if (firstImage is String) {
+                imageUrl = firstImage;
+              } else if (firstImage is Map && firstImage['url'] != null) {
+                imageUrl = firstImage['url'].toString();
+              }
+            }
 
             return {
               'id': hotel['_id'] ?? '',
@@ -134,11 +142,26 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
   }
 
   Widget _buildImageSection() {
-    final imageUrl = widget.hotel['image'] ?? 'assets/images/booking.jpg';
+    final imageData = widget.hotel['image'];
+    String imageUrl = 'assets/images/booking.jpg';
+    
+    if (imageData != null) {
+      if (imageData is String) {
+        imageUrl = imageData;
+      } else if (imageData is Map) {
+        imageUrl = imageData['url']?.toString() ?? 
+                   imageData['image']?.toString() ?? 
+                   imageData['src']?.toString() ?? 
+                   'assets/images/booking.jpg';
+      } else {
+        imageUrl = imageData.toString();
+      }
+    }
+    
     return Container(
       height: 400,
       width: double.infinity,
-      child: imageUrl.toString().startsWith('http')
+      child: imageUrl.startsWith('http') || imageUrl.startsWith('https')
           ? Image.network(
               imageUrl,
               width: double.infinity,
@@ -392,7 +415,15 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
     final description = room['description'] ?? '';
     final amenities = room['amenities'] ?? [];
     final images = room['images'] ?? [];
-    final imageUrl = images.isNotEmpty ? images[0] : null;
+    String? imageUrl;
+    if (images.isNotEmpty) {
+      final firstImage = images[0];
+      if (firstImage is String) {
+        imageUrl = firstImage;
+      } else if (firstImage is Map && firstImage['url'] != null) {
+        imageUrl = firstImage['url'].toString();
+      }
+    }
     final totalRooms = room['totalRooms'] ?? 0;
     final cancellationRules = room['cancellationRules'] ?? {};
     final isNonRefundable = cancellationRules['nonRefundable'] ?? false;
@@ -754,6 +785,55 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
     );
   }
 
+  Widget _getImageWidget(dynamic imageData) {
+    String imagePath = 'assets/images/sri.jpg';
+    
+    if (imageData != null) {
+      if (imageData is String) {
+        imagePath = imageData;
+      } else if (imageData is Map) {
+        imagePath = imageData['url']?.toString() ?? 
+                   imageData['image']?.toString() ?? 
+                   imageData['src']?.toString() ?? 
+                   'assets/images/sri.jpg';
+      } else {
+        imagePath = imageData.toString();
+      }
+    }
+
+    if (imagePath.startsWith('http') || imagePath.startsWith('https')) {
+      return Image.network(
+        imagePath,
+        width: double.infinity,
+        height: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Image.asset(
+            'assets/images/sri.jpg',
+            width: double.infinity,
+            height: double.infinity,
+            fit: BoxFit.cover,
+          );
+        },
+      );
+    } else {
+      return Image.asset(
+        imagePath,
+        width: double.infinity,
+        height: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Image.asset(
+            'assets/images/sri.jpg',
+            width: double.infinity,
+            height: double.infinity,
+            fit: BoxFit.cover,
+          );
+        },
+      );
+    }
+  }
+
   Widget _buildRecommendedCard(Map<String, dynamic> hotel) {
     return Container(
       width: 250,
@@ -772,27 +852,7 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
         borderRadius: BorderRadius.circular(20),
         child: Stack(
           children: [
-            hotel['image'].toString().startsWith('http')
-                ? Image.network(
-                    hotel['image'],
-                    width: double.infinity,
-                    height: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Image.asset(
-                        'assets/images/sri.jpg',
-                        width: double.infinity,
-                        height: double.infinity,
-                        fit: BoxFit.cover,
-                      );
-                    },
-                  )
-                : Image.asset(
-                    hotel['image'] ?? 'assets/images/sri.jpg',
-                    width: double.infinity,
-                    height: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
+            _getImageWidget(hotel['image']),
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(

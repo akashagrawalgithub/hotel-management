@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../constants/colors.dart';
 import '../services/hotel_service.dart';
 import '../services/auth_service.dart';
+import '../l10n/app_localizations.dart';
 import 'notification_page.dart';
 import 'hotel_detail_page.dart';
 
@@ -60,7 +61,7 @@ class _MyBookingsPageState extends State<MyBookingsPage> with SingleTickerProvid
                       ? city
                       : state.isNotEmpty
                           ? state
-                          : 'Location not available';
+                          : AppLocalizations.of(context)?.locationNotAvailable ?? 'Location not available';
 
               final images = hotel['images'] ?? [];
               final imageUrl = images.isNotEmpty ? images[0] : null;
@@ -72,7 +73,7 @@ class _MyBookingsPageState extends State<MyBookingsPage> with SingleTickerProvid
                   ? DateTime.parse(booking['checkOut'])
                   : null;
 
-              String datesString = 'Dates not available';
+              String datesString = AppLocalizations.of(context)?.datesNotAvailable ?? 'Dates not available';
               if (checkIn != null && checkOut != null) {
                 final monthNames = [
                   'Jan',
@@ -94,7 +95,14 @@ class _MyBookingsPageState extends State<MyBookingsPage> with SingleTickerProvid
 
               final guestCount = booking['guestCount'] ?? 1;
               final roomCount = booking['roomCount'] ?? 1;
-              final guestsString = '$guestCount Guest${guestCount > 1 ? 's' : ''} ($roomCount Room${roomCount > 1 ? 's' : ''})';
+              final localizations = AppLocalizations.of(context);
+              final guestText = guestCount > 1 
+                  ? (localizations?.guests ?? 'Guests')
+                  : (localizations?.guest ?? 'Guest');
+              final roomText = roomCount > 1
+                  ? (localizations?.rooms ?? 'Rooms')
+                  : (localizations?.room ?? 'Room');
+              final guestsString = '$guestCount $guestText ($roomCount $roomText)';
 
               return {
                 'id': booking['_id'] ?? '',
@@ -184,9 +192,9 @@ class _MyBookingsPageState extends State<MyBookingsPage> with SingleTickerProvid
           },
         ),
       ),
-      title: const Text(
-        'My Bookings',
-        style: TextStyle(
+      title: Text(
+        AppLocalizations.of(context)?.myBookings ?? 'My Bookings',
+        style: const TextStyle(
           color: Colors.black,
           fontSize: 20,
           fontWeight: FontWeight.bold,
@@ -225,7 +233,7 @@ class _MyBookingsPageState extends State<MyBookingsPage> with SingleTickerProvid
       child: TextField(
         controller: _searchController,
         decoration: InputDecoration(
-          hintText: 'Find your space',
+          hintText: AppLocalizations.of(context)?.findYourSpace ?? 'Find your space',
           hintStyle: TextStyle(color: Colors.grey.shade600),
           border: InputBorder.none,
           suffixIcon: _searchController.text.isNotEmpty
@@ -265,7 +273,7 @@ class _MyBookingsPageState extends State<MyBookingsPage> with SingleTickerProvid
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  'Booked',
+                  AppLocalizations.of(context)?.booked ?? 'Booked',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: _selectedTabIndex == 0 ? Colors.black : AppColors.red,
@@ -291,7 +299,7 @@ class _MyBookingsPageState extends State<MyBookingsPage> with SingleTickerProvid
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  'History',
+                  AppLocalizations.of(context)?.history ?? 'History',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: _selectedTabIndex == 1 ? Colors.black : AppColors.red,
@@ -312,7 +320,7 @@ class _MyBookingsPageState extends State<MyBookingsPage> with SingleTickerProvid
       return const Center(child: CircularProgressIndicator());
     }
     if (_bookings.isEmpty) {
-      return const Center(child: Text('No bookings found'));
+      return Center(child: Text(AppLocalizations.of(context)?.noBookingsFound ?? 'No bookings found'));
     }
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -328,7 +336,7 @@ class _MyBookingsPageState extends State<MyBookingsPage> with SingleTickerProvid
       return const Center(child: CircularProgressIndicator());
     }
     if (_historyBookings.isEmpty) {
-      return const Center(child: Text('No booking history found'));
+      return Center(child: Text(AppLocalizations.of(context)?.noBookingHistoryFound ?? 'No booking history found'));
     }
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -467,7 +475,7 @@ class _MyBookingsPageState extends State<MyBookingsPage> with SingleTickerProvid
                         ),
                       ),
                       Text(
-                        ' /night',
+                        ' ${AppLocalizations.of(context)?.night ?? '/night'}',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey.shade700,
@@ -481,7 +489,7 @@ class _MyBookingsPageState extends State<MyBookingsPage> with SingleTickerProvid
                       Icon(Icons.calendar_today, color: Colors.grey.shade600, size: 16),
                       const SizedBox(width: 4),
                       Text(
-                        'Dates ${booking['dates']}',
+                        '${AppLocalizations.of(context)?.dates ?? 'Dates'} ${booking['dates']}',
                         style: TextStyle(
                           fontSize: 13,
                           color: Colors.grey.shade600,
@@ -495,7 +503,7 @@ class _MyBookingsPageState extends State<MyBookingsPage> with SingleTickerProvid
                       Icon(Icons.person, color: Colors.grey.shade600, size: 16),
                       const SizedBox(width: 4),
                       Text(
-                        'Guest ${booking['guests']}',
+                        '${AppLocalizations.of(context)?.guest ?? 'Guest'} ${booking['guests']}',
                         style: TextStyle(
                           fontSize: 13,
                           color: Colors.grey.shade600,

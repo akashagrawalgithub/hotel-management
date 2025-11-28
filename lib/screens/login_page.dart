@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/colors.dart';
 import '../services/auth_service.dart';
+import '../l10n/app_localizations.dart';
 import 'register_page.dart';
 import 'main_navigation_page.dart';
 
@@ -86,18 +87,18 @@ class _LoginPageState extends State<LoginPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Welcome to',
-          style: TextStyle(
+        Text(
+          AppLocalizations.of(context)?.welcomeTo ?? 'Welcome to',
+          style: const TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
             color: AppColors.red,
           ),
         ),
         const SizedBox(height: 8),
-        const Text(
-          'Flash Rooms',
-          style: TextStyle(
+        Text(
+          AppLocalizations.of(context)?.flashRooms ?? 'Flash Rooms',
+          style: const TextStyle(
             fontSize: 36,
             fontWeight: FontWeight.bold,
             color: AppColors.red,
@@ -105,7 +106,7 @@ class _LoginPageState extends State<LoginPage> {
         ),
         const SizedBox(height: 12),
         Text(
-          'The best place to find millions of of apartment near by temples',
+          AppLocalizations.of(context)?.bestPlaceDescription ?? 'The best place to find millions of of apartment near by temples',
           style: TextStyle(
             fontSize: 14,
             color: AppColors.red.withOpacity(0.9),
@@ -126,7 +127,7 @@ class _LoginPageState extends State<LoginPage> {
         controller: _emailController,
         keyboardType: TextInputType.emailAddress,
         decoration: InputDecoration(
-          hintText: 'Enter your email',
+          hintText: AppLocalizations.of(context)?.enterYourEmail ?? 'Enter your email',
           hintStyle: TextStyle(color: Colors.grey.shade400),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
@@ -149,7 +150,7 @@ class _LoginPageState extends State<LoginPage> {
         controller: _passwordController,
         obscureText: _obscurePassword,
         decoration: InputDecoration(
-          hintText: 'Enter your password',
+          hintText: AppLocalizations.of(context)?.enterYourPassword ?? 'Enter your password',
           hintStyle: TextStyle(color: Colors.grey.shade400),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
@@ -181,7 +182,7 @@ class _LoginPageState extends State<LoginPage> {
       child: TextButton(
         onPressed: () {},
         child: Text(
-          'Forgot Password?',
+          AppLocalizations.of(context)?.forgotPassword ?? 'Forgot Password?',
           style: TextStyle(
             color: Colors.white,
             fontSize: 14,
@@ -214,9 +215,9 @@ class _LoginPageState extends State<LoginPage> {
                   valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                 ),
               )
-            : const Text(
-                'Login',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            : Text(
+                AppLocalizations.of(context)?.login ?? 'Login',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
       ),
     );
@@ -225,15 +226,15 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> _handleLogin() async {
     // Manual validation with snackbar
     if (_emailController.text.trim().isEmpty) {
-      _showSnackBar('Please enter your email');
+      _showSnackBar(AppLocalizations.of(context)?.pleaseEnterYourEmail ?? 'Please enter your email');
       return;
     }
     if (!_emailController.text.trim().contains('@')) {
-      _showSnackBar('Please enter a valid email');
+      _showSnackBar(AppLocalizations.of(context)?.pleaseEnterValidEmail ?? 'Please enter a valid email');
       return;
     }
     if (_passwordController.text.isEmpty) {
-      _showSnackBar('Please enter your password');
+      _showSnackBar(AppLocalizations.of(context)?.pleaseEnterYourPassword ?? 'Please enter your password');
       return;
     }
 
@@ -326,7 +327,7 @@ class _LoginPageState extends State<LoginPage> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
-                'Or Login with',
+                AppLocalizations.of(context)?.orLoginWith ?? 'Or Login with',
                 style: TextStyle(color: Colors.white, fontSize: 14),
               ),
             ),
@@ -379,7 +380,7 @@ class _LoginPageState extends State<LoginPage> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(
-              'Skip For Now',
+              AppLocalizations.of(context)?.skipForNow ?? 'Skip For Now',
               style: TextStyle(color: Colors.white, fontSize: 14),
             ),
           ),
@@ -395,7 +396,7 @@ class _LoginPageState extends State<LoginPage> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            "Don't have an account?",
+            AppLocalizations.of(context)?.dontHaveAccount ?? "Don't have an account?",
             style: TextStyle(color: Colors.white, fontSize: 14),
           ),
           TextButton(
@@ -406,7 +407,7 @@ class _LoginPageState extends State<LoginPage> {
               );
             },
             child: Text(
-              'Register Now',
+              AppLocalizations.of(context)?.registerNow ?? 'Register Now',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 14,
