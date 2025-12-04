@@ -4,6 +4,7 @@ import '../services/auth_service.dart';
 import '../l10n/app_localizations.dart';
 import 'register_page.dart';
 import 'main_navigation_page.dart';
+import 'forgot_password_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -50,10 +51,10 @@ class _LoginPageState extends State<LoginPage> {
                     _buildForgotPassword(),
                     const SizedBox(height: 30),
                     _buildLoginButton(),
-                    const SizedBox(height: 30),
-                    _buildSocialLoginSection(),
-                    const SizedBox(height: 30),
-                    _buildSkipForNow(),
+                    // const SizedBox(height: 30),
+                    // _buildSocialLoginSection(),
+                    // const SizedBox(height: 30),
+                    // _buildSkipForNow(),
                     const SizedBox(height: 40),
                     _buildRegisterLink(),
                     const SizedBox(height: 20),
@@ -180,7 +181,12 @@ class _LoginPageState extends State<LoginPage> {
     return Align(
       alignment: Alignment.centerRight,
       child: TextButton(
-        onPressed: () {},
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const ForgotPasswordPage()),
+          );
+        },
         child: Text(
           AppLocalizations.of(context)?.forgotPassword ?? 'Forgot Password?',
           style: TextStyle(

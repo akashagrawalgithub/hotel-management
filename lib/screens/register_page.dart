@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/colors.dart';
 import '../services/auth_service.dart';
+import '../l10n/app_localizations.dart';
 import 'login_page.dart';
 import 'main_navigation_page.dart';
 
@@ -57,10 +58,10 @@ class _RegisterPageState extends State<RegisterPage> {
                     _buildConfirmPasswordField(),
                     const SizedBox(height: 30),
                     _buildRegisterButton(),
-                    const SizedBox(height: 30),
-                    _buildSocialRegisterSection(),
-                    const SizedBox(height: 30),
-                    _buildSkipForNow(),
+                    // const SizedBox(height: 30),
+                    // _buildSocialRegisterSection(),
+                    // const SizedBox(height: 30),
+                    // _buildSkipForNow(),
                     const SizedBox(height: 40),
                     _buildLoginLink(),
                     const SizedBox(height: 20),
@@ -94,9 +95,9 @@ class _RegisterPageState extends State<RegisterPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Flash rooms',
-          style: TextStyle(
+        Text(
+          AppLocalizations.of(context)?.flashRooms ?? 'Flash rooms',
+          style: const TextStyle(
             fontSize: 36,
             fontWeight: FontWeight.bold,
             color: AppColors.red,
@@ -104,7 +105,8 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
         const SizedBox(height: 12),
         Text(
-          'The best place to find millions of of apartment near by temples',
+          AppLocalizations.of(context)?.bestPlaceDescription ??
+              'The best place to find millions of of apartment near by temples',
           style: TextStyle(
             fontSize: 14,
             color: AppColors.red.withOpacity(0.9),
@@ -124,7 +126,7 @@ class _RegisterPageState extends State<RegisterPage> {
       child: TextFormField(
         controller: _usernameController,
         decoration: InputDecoration(
-          hintText: 'Name',
+          hintText: AppLocalizations.of(context)?.name ?? 'Name',
           hintStyle: TextStyle(color: Colors.grey.shade400),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
@@ -147,7 +149,7 @@ class _RegisterPageState extends State<RegisterPage> {
         controller: _emailController,
         keyboardType: TextInputType.emailAddress,
         decoration: InputDecoration(
-          hintText: 'Email',
+          hintText: AppLocalizations.of(context)?.email ?? 'Email',
           hintStyle: TextStyle(color: Colors.grey.shade400),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
@@ -170,7 +172,7 @@ class _RegisterPageState extends State<RegisterPage> {
         controller: _passwordController,
         obscureText: _obscurePassword,
         decoration: InputDecoration(
-          hintText: 'Password',
+          hintText: AppLocalizations.of(context)?.enterYourPassword ?? 'Password',
           hintStyle: TextStyle(color: Colors.grey.shade400),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
@@ -206,7 +208,7 @@ class _RegisterPageState extends State<RegisterPage> {
         controller: _confirmPasswordController,
         obscureText: _obscureConfirmPassword,
         decoration: InputDecoration(
-          hintText: 'Confirm password',
+          hintText: AppLocalizations.of(context)?.pleaseConfirmYourPassword ?? 'Confirm password',
           hintStyle: TextStyle(color: Colors.grey.shade400),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
@@ -254,9 +256,10 @@ class _RegisterPageState extends State<RegisterPage> {
                   valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                 ),
               )
-            : const Text(
-                'Register',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            : Text(
+                AppLocalizations.of(context)?.registerNow ?? 'Register',
+                style: const TextStyle(
+                    fontSize: 18, fontWeight: FontWeight.bold),
               ),
       ),
     );
@@ -265,31 +268,38 @@ class _RegisterPageState extends State<RegisterPage> {
   Future<void> _handleRegister() async {
     // Manual validation with snackbar
     if (_usernameController.text.trim().isEmpty) {
-      _showSnackBar('Please enter your name');
+      _showSnackBar(
+          AppLocalizations.of(context)?.pleaseEnterYourName ?? 'Please enter your name');
       return;
     }
     if (_emailController.text.trim().isEmpty) {
-      _showSnackBar('Please enter your email');
+      _showSnackBar(AppLocalizations.of(context)?.pleaseEnterYourEmail ??
+          'Please enter your email');
       return;
     }
     if (!_emailController.text.trim().contains('@')) {
-      _showSnackBar('Please enter a valid email');
+      _showSnackBar(AppLocalizations.of(context)?.pleaseEnterValidEmail ??
+          'Please enter a valid email');
       return;
     }
     if (_passwordController.text.isEmpty) {
-      _showSnackBar('Please enter your password');
+      _showSnackBar(AppLocalizations.of(context)?.pleaseEnterYourPassword ??
+          'Please enter your password');
       return;
     }
     if (_passwordController.text.length < 6) {
-      _showSnackBar('Password must be at least 6 characters');
+      _showSnackBar(AppLocalizations.of(context)?.passwordMinChars ??
+          'Password must be at least 6 characters');
       return;
     }
     if (_confirmPasswordController.text.isEmpty) {
-      _showSnackBar('Please confirm your password');
+      _showSnackBar(AppLocalizations.of(context)?.pleaseConfirmYourPassword ??
+          'Please confirm your password');
       return;
     }
     if (_confirmPasswordController.text != _passwordController.text) {
-      _showSnackBar('Passwords do not match');
+      _showSnackBar(AppLocalizations.of(context)?.passwordsDoNotMatch ??
+          'Passwords do not match');
       return;
     }
 
@@ -384,8 +394,8 @@ class _RegisterPageState extends State<RegisterPage> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
-                'Or Register with',
-                style: TextStyle(color: Colors.white, fontSize: 14),
+                AppLocalizations.of(context)?.registerNow ?? 'Or Register with',
+                style: const TextStyle(color: Colors.white, fontSize: 14),
               ),
             ),
             Expanded(child: Divider(color: Colors.white.withOpacity(0.5))),
@@ -453,8 +463,9 @@ class _RegisterPageState extends State<RegisterPage> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            "Already have an account?",
-            style: TextStyle(color: Colors.white, fontSize: 14),
+            AppLocalizations.of(context)?.alreadyHaveAccount ??
+                "Already have an account?",
+            style: const TextStyle(color: Colors.white, fontSize: 14),
           ),
           TextButton(
             onPressed: () {
@@ -463,9 +474,9 @@ class _RegisterPageState extends State<RegisterPage> {
                 MaterialPageRoute(builder: (context) => const LoginPage()),
               );
             },
-            child: const Text(
-              'Login Now',
-              style: TextStyle(
+            child: Text(
+              AppLocalizations.of(context)?.loginNow ?? 'Login Now',
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 14,
                 fontWeight: FontWeight.bold,

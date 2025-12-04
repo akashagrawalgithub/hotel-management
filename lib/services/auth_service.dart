@@ -333,6 +333,20 @@ class AuthService {
     }
   }
 
+  // Change Password API call
+  static Future<Response> changePassword(String userId, String password) async {
+    try {
+      _setupInterceptors();
+      final response = await _dio.put(
+        '/auth/change-password/$userId',
+        data: {'password': password},
+      );
+      return response;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   // Logout API call
   static Future<Response> logout() async {
     try {

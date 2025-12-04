@@ -40,6 +40,10 @@ class AppLocalizations {
       'skipForNow': 'Skip For Now',
       'dontHaveAccount': "Don't have an account?",
       'registerNow': 'Register Now',
+      'alreadyHaveAccount': 'Already have an account?',
+      'loginNow': 'Login Now',
+      'alreadyHaveAccount': 'Already have an account?',
+      'loginNow': 'Login Now',
       'hey': 'Hey',
       'letsStartJourney': "Let's start your journey!",
       'location': 'Location',
@@ -62,6 +66,14 @@ class AppLocalizations {
       'pleaseEnterYourEmail': 'Please enter your email',
       'pleaseEnterValidEmail': 'Please enter a valid email',
       'pleaseEnterYourPassword': 'Please enter your password',
+      'pleaseEnterYourName': 'Please enter your name',
+      'pleaseConfirmYourPassword': 'Please confirm your password',
+      'passwordsDoNotMatch': 'Passwords do not match',
+      'passwordMinChars': 'Password must be at least 6 characters',
+      'pleaseEnterYourName': 'Please enter your name',
+      'pleaseConfirmYourPassword': 'Please confirm your password',
+      'passwordsDoNotMatch': 'Passwords do not match',
+      'passwordMinChars': 'Password must be at least 6 characters',
       'selectLanguage': 'Select Language',
       'english': 'English',
       'hindi': 'हिंदी',
@@ -81,6 +93,8 @@ class AppLocalizations {
       'totalPayment': 'Total Payment:',
       'guestInformation': 'Guest Information',
       'fullName': 'Full Name',
+      'name': 'Name',
+      'name': 'Name',
       'email': 'Email',
       'phoneNumber': 'Phone Number',
       'totalPrice': 'Total price',
@@ -114,6 +128,12 @@ class AppLocalizations {
       'freeBreakfastNotification': 'Free breakfast at Double Oak Hotel for November 27, 2024',
       'noNotifications': 'No notifications',
       'noNotificationsMessage': 'You\'re all caught up!',
+      'resetPasswordDescription': 'Enter your email address and we will send you a reset link',
+      'sendResetLink': 'Send Reset Link',
+      'resetLinkSent': 'Reset Link Sent',
+      'resetLinkSentMessage': 'We have sent a password reset link to your email address. Please check your inbox.',
+      'backToLogin': 'Back to Login',
+      'ok': 'OK',
     },
     'hi': {
       'appTitle': 'फ्लैश रूम',
@@ -164,6 +184,10 @@ class AppLocalizations {
       'pleaseEnterYourEmail': 'कृपया अपना ईमेल दर्ज करें',
       'pleaseEnterValidEmail': 'कृपया एक वैध ईमेल दर्ज करें',
       'pleaseEnterYourPassword': 'कृपया अपना पासवर्ड दर्ज करें',
+      'pleaseEnterYourName': 'कृपया अपना नाम दर्ज करें',
+      'pleaseConfirmYourPassword': 'कृपया अपना पासवर्ड पुष्टि करें',
+      'passwordsDoNotMatch': 'पासवर्ड मेल नहीं खाते',
+      'passwordMinChars': 'पासवर्ड कम से कम 6 अक्षरों का होना चाहिए',
       'selectLanguage': 'भाषा चुनें',
       'english': 'English',
       'hindi': 'हिंदी',
@@ -183,6 +207,7 @@ class AppLocalizations {
       'totalPayment': 'कुल भुगतान:',
       'guestInformation': 'अतिथि जानकारी',
       'fullName': 'पूरा नाम',
+      'name': 'नाम',
       'email': 'ईमेल',
       'phoneNumber': 'फोन नंबर',
       'totalPrice': 'कुल मूल्य',
@@ -216,6 +241,12 @@ class AppLocalizations {
       'freeBreakfastNotification': '27 नवंबर, 2024 को डबल ओक होटल में निःशुल्क नाश्ता',
       'noNotifications': 'कोई सूचनाएं नहीं',
       'noNotificationsMessage': 'आप सभी अपडेट हैं!',
+      'resetPasswordDescription': 'अपना ईमेल पता दर्ज करें और हम आपको एक रीसेट लिंक भेजेंगे',
+      'sendResetLink': 'रीसेट लिंक भेजें',
+      'resetLinkSent': 'रीसेट लिंक भेज दिया गया',
+      'resetLinkSentMessage': 'हमने आपके ईमेल पते पर एक पासवर्ड रीसेट लिंक भेजा है। कृपया अपना इनबॉक्स जांचें।',
+      'backToLogin': 'लॉगिन पर वापस जाएं',
+      'ok': 'ठीक है',
     },
   };
 
@@ -271,6 +302,10 @@ class AppLocalizations {
   String get pleaseEnterYourEmail => translate('pleaseEnterYourEmail');
   String get pleaseEnterValidEmail => translate('pleaseEnterValidEmail');
   String get pleaseEnterYourPassword => translate('pleaseEnterYourPassword');
+  String get pleaseEnterYourName => translate('pleaseEnterYourName');
+  String get pleaseConfirmYourPassword => translate('pleaseConfirmYourPassword');
+  String get passwordsDoNotMatch => translate('passwordsDoNotMatch');
+  String get passwordMinChars => translate('passwordMinChars');
   String get selectLanguage => translate('selectLanguage');
   String get english => translate('english');
   String get hindi => translate('hindi');
@@ -290,6 +325,7 @@ class AppLocalizations {
   String get totalPayment => translate('totalPayment');
   String get guestInformation => translate('guestInformation');
   String get fullName => translate('fullName');
+  String get name => translate('name');
   String get email => translate('email');
   String get phoneNumber => translate('phoneNumber');
   String get totalPrice => translate('totalPrice');
@@ -303,6 +339,8 @@ class AppLocalizations {
   String get findYourSpace => translate('findYourSpace');
   String get booked => translate('booked');
   String get history => translate('history');
+  String get alreadyHaveAccount => translate('alreadyHaveAccount');
+  String get loginNow => translate('loginNow');
   String get noBookingsFound => translate('noBookingsFound');
   String get noBookingHistoryFound => translate('noBookingHistoryFound');
   String get dates => translate('dates');
@@ -323,6 +361,12 @@ class AppLocalizations {
   String get freeBreakfastNotification => translate('freeBreakfastNotification');
   String get noNotifications => translate('noNotifications');
   String get noNotificationsMessage => translate('noNotificationsMessage');
+  String get resetPasswordDescription => translate('resetPasswordDescription');
+  String get sendResetLink => translate('sendResetLink');
+  String get resetLinkSent => translate('resetLinkSent');
+  String get resetLinkSentMessage => translate('resetLinkSentMessage');
+  String get backToLogin => translate('backToLogin');
+  String get ok => translate('ok');
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
