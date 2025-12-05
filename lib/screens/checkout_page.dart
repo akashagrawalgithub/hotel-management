@@ -1,6 +1,10 @@
+import 'package:flash_room/network/dio_client_impl.dart';
+import 'package:flash_room/screens/payment_status_page.dart';
 import 'package:flutter/material.dart';
+
 import '../constants/colors.dart';
-import 'payment_complete_page.dart';
+import '../constants/payment_states.dart';
+import '../services/booking_payment_service.dart';
 import 'notification_page.dart';
 
 class CheckoutPage extends StatefulWidget {
@@ -25,6 +29,10 @@ class CheckoutPage extends StatefulWidget {
 
 class _CheckoutPageState extends State<CheckoutPage> {
   String? _selectedCoupon;
+  final service = BookingPaymentService(
+    client: DioClientImpl(), // or DioClientImpl()
+    baseUrl: "https://hotel-backend-vgct.onrender.com",
+  );
 
   @override
   void initState() {
@@ -37,7 +45,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
   }
 
   double get _totalPrice {
-    double pricePerNight = double.tryParse(widget.hotel['price']?.toString() ?? '480') ?? 480.0;
+    double pricePerNight =
+        double.tryParse(widget.hotel['price']?.toString() ?? '480') ?? 480.0;
     double basePrice = pricePerNight * _nights;
     double cleaningFee = 15.0;
     double serviceFee = 40.0;
@@ -60,9 +69,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
             const SizedBox(height: 20),
             _buildPriceDetails(),
             const SizedBox(height: 20),
-            _buildPromoSection(context),
-            const SizedBox(height: 20),
-            
+            /* removed as requested by client */
+            // _buildPromoSection(context),
+            // const SizedBox(height: 20),
           ],
         ),
       ),
@@ -102,7 +111,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
             shape: BoxShape.circle,
           ),
           child: IconButton(
-            icon: const Icon(Icons.notifications, color: Colors.white, size: 20),
+            icon:
+                const Icon(Icons.notifications, color: Colors.white, size: 20),
             onPressed: () {
               Navigator.push(
                 context,
@@ -182,7 +192,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.star, color: AppColors.gradientStart, size: 18),
+                  const Icon(Icons.star,
+                      color: AppColors.gradientStart, size: 18),
                   const SizedBox(width: 4),
                   Text(
                     widget.hotel['rating']?.toString() ?? '4.5',
@@ -304,13 +315,15 @@ class _CheckoutPageState extends State<CheckoutPage> {
             ),
           ),
           const SizedBox(height: 15),
-          _buildPriceItem('Total : $_nights Night', 'Rs ${((double.tryParse(widget.hotel['price']?.toString() ?? '480') ?? 480.0) * _nights).toStringAsFixed(0)}'),
+          _buildPriceItem('Total : $_nights Night',
+              'Rs ${((double.tryParse(widget.hotel['price']?.toString() ?? '480') ?? 480.0) * _nights).toStringAsFixed(0)}'),
           const SizedBox(height: 10),
           _buildPriceItem('Cleaning Fee', 'Rs 15'),
           const SizedBox(height: 10),
           _buildPriceItem('Service Fee', 'Rs 40'),
           const SizedBox(height: 10),
-          _buildPriceItem('Discount', 'Rs ${_selectedCoupon != null ? '100' : '0'}'),
+          _buildPriceItem(
+              'Discount', 'Rs ${_selectedCoupon != null ? '100' : '0'}'),
           const Divider(height: 30),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -338,8 +351,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
-  
-
   Widget _buildPriceItem(String label, String value) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -361,8 +372,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
       ],
     );
   }
-
- 
 
   Widget _buildInputField(String hint) {
     return Container(
@@ -415,7 +424,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       _selectedCoupon ?? 'Select',
                       style: TextStyle(
                         fontSize: 14,
-                        color: _selectedCoupon != null ? Colors.black : AppColors.red,
+                        color: _selectedCoupon != null
+                            ? Colors.black
+                            : AppColors.red,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -491,17 +502,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
             ),
             ElevatedButton(
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const PaymentCompletePage(),
-                  ),
-                );
+                handleBookingAndPayment(context);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.red,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
                 minimumSize: const Size(0, 40),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
@@ -519,6 +526,83 @@ class _CheckoutPageState extends State<CheckoutPage> {
         ),
       ),
     );
+  }
+
+  // TODO : use real data
+  Future<void> handleBookingAndPayment(BuildContext context) async {
+    final service = BookingPaymentService(
+      client: DioClientImpl(),
+      baseUrl: "https://hotel-backend-vgct.onrender.com",
+    );
+
+    try {
+      final result = await service.startBookingPayment(
+        bookingBody: {
+          "hotelId": "68e8fabe3a5edf4bc8591bf0",
+          "roomId": "68e9e77bf093ee633ca9dc2f",
+          "checkIn": "2025-12-25",
+          "checkOut": "2025-12-26",
+          "adults": 1,
+          "children": 2,
+          "guestDetails": {
+            "firstName": "Name",
+            "lastName": "Ghosh",
+            "email": "theronighosh@gmail.com",
+            "phone": "6297358939",
+            "address": {
+              "street": "Dariasudi ,Guma",
+              "city": "Dariasudi",
+              "state": "Rajasthan",
+              "postalCode": "743234",
+            },
+            "idProof": "id card",
+            "specialRequests": "",
+          },
+          "roomsRequested": 1,
+        },
+        context: context,
+      );
+
+      final status = result["status"];
+
+      // If cancelled → only toast, no navigation
+      if (status == "cancelled") {
+        final reason = result["error"] ?? "Payment cancelled by user";
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(reason)),
+        );
+
+        return; // stop here
+      }
+
+      // SUCCESS → navigate to PaymentStatusPage
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PaymentStatusPage(
+            state: PaymentState.success,
+            booking: result["booking"],
+            razorpayData: result["razorpay"],
+          ),
+        ),
+      );
+    } catch (e) {
+      // Unexpected crash
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("Something went wrong: $e")));
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PaymentStatusPage(
+            state: PaymentState.failed,
+            reason: e.toString(),
+          ),
+        ),
+      );
+    }
   }
 
   String _getMonthName(int month) {
@@ -560,7 +644,7 @@ class _DatePickerBottomSheetState extends State<DatePickerBottomSheet> {
   DateTime? _selectedStartDate;
   DateTime? _selectedEndDate;
   DateTime _currentMonth = DateTime.now();
-  
+
   DateTime get _today {
     final now = DateTime.now();
     return DateTime(now.year, now.month, now.day);
@@ -571,12 +655,13 @@ class _DatePickerBottomSheetState extends State<DatePickerBottomSheet> {
     super.initState();
     _selectedStartDate = widget.checkInDate;
     _selectedEndDate = widget.checkOutDate;
-    if (_currentMonth.month != (_selectedStartDate?.month ?? DateTime.now().month)) {
+    if (_currentMonth.month !=
+        (_selectedStartDate?.month ?? DateTime.now().month)) {
       _currentMonth = DateTime(_selectedStartDate?.year ?? DateTime.now().year,
           _selectedStartDate?.month ?? DateTime.now().month);
     }
   }
-  
+
   bool _isDateBeforeToday(DateTime date) {
     final dateOnly = DateTime(date.year, date.month, date.day);
     return dateOnly.isBefore(_today);
@@ -631,7 +716,8 @@ class _DatePickerBottomSheetState extends State<DatePickerBottomSheet> {
                       ),
                       onPressed: () {
                         setState(() {
-                          _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1);
+                          _currentMonth = DateTime(
+                              _currentMonth.year, _currentMonth.month - 1);
                         });
                       },
                     ),
@@ -654,7 +740,8 @@ class _DatePickerBottomSheetState extends State<DatePickerBottomSheet> {
                       ),
                       onPressed: () {
                         setState(() {
-                          _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1);
+                          _currentMonth = DateTime(
+                              _currentMonth.year, _currentMonth.month + 1);
                         });
                       },
                     ),
@@ -682,12 +769,14 @@ class _DatePickerBottomSheetState extends State<DatePickerBottomSheet> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: _selectedStartDate != null && _selectedEndDate != null
-                        ? () {
-                            widget.onDatesSelected(_selectedStartDate!, _selectedEndDate!);
-                            Navigator.pop(context);
-                          }
-                        : null,
+                    onPressed:
+                        _selectedStartDate != null && _selectedEndDate != null
+                            ? () {
+                                widget.onDatesSelected(
+                                    _selectedStartDate!, _selectedEndDate!);
+                                Navigator.pop(context);
+                              }
+                            : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.red,
                       foregroundColor: Colors.white,
@@ -741,15 +830,19 @@ class _DatePickerBottomSheetState extends State<DatePickerBottomSheet> {
                 crossAxisCount: 7,
                 childAspectRatio: 1,
               ),
-              itemCount: firstDayOfWeek + daysInMonth + (42 - firstDayOfWeek - daysInMonth),
+              itemCount: firstDayOfWeek +
+                  daysInMonth +
+                  (42 - firstDayOfWeek - daysInMonth),
               itemBuilder: (context, index) {
                 DateTime date;
                 bool isCurrentMonth;
-                
+
                 if (index < firstDayOfWeek) {
-                  final prevMonth = DateTime(_currentMonth.year, _currentMonth.month - 1, 0);
+                  final prevMonth =
+                      DateTime(_currentMonth.year, _currentMonth.month - 1, 0);
                   final day = prevMonth.day - firstDayOfWeek + index + 1;
-                  date = DateTime(_currentMonth.year, _currentMonth.month - 1, day);
+                  date = DateTime(
+                      _currentMonth.year, _currentMonth.month - 1, day);
                   isCurrentMonth = false;
                 } else if (index < firstDayOfWeek + daysInMonth) {
                   final day = index - firstDayOfWeek + 1;
@@ -757,10 +850,11 @@ class _DatePickerBottomSheetState extends State<DatePickerBottomSheet> {
                   isCurrentMonth = true;
                 } else {
                   final day = index - firstDayOfWeek - daysInMonth + 1;
-                  date = DateTime(_currentMonth.year, _currentMonth.month + 1, day);
+                  date = DateTime(
+                      _currentMonth.year, _currentMonth.month + 1, day);
                   isCurrentMonth = false;
                 }
-                
+
                 return _buildDateCell(date, isCurrentMonth: isCurrentMonth);
               },
             ),
@@ -783,21 +877,23 @@ class _DatePickerBottomSheetState extends State<DatePickerBottomSheet> {
         _selectedEndDate != null &&
         date.isAfter(_selectedStartDate!) &&
         date.isBefore(_selectedEndDate!);
-    
+
     final isPastDate = _isDateBeforeToday(date);
     final isSelectable = isCurrentMonth && !isPastDate;
 
     return GestureDetector(
       onTap: isSelectable
           ? () {
-              if (_selectedStartDate == null || (_selectedStartDate != null && _selectedEndDate != null)) {
+              if (_selectedStartDate == null ||
+                  (_selectedStartDate != null && _selectedEndDate != null)) {
                 if (!isPastDate) {
                   setState(() {
                     _selectedStartDate = date;
                     _selectedEndDate = null;
                   });
                 }
-              } else if (_selectedStartDate != null && _selectedEndDate == null) {
+              } else if (_selectedStartDate != null &&
+                  _selectedEndDate == null) {
                 if (date.isBefore(_selectedStartDate!)) {
                   if (!isPastDate) {
                     setState(() {
@@ -828,7 +924,9 @@ class _DatePickerBottomSheetState extends State<DatePickerBottomSheet> {
             '${date.day}',
             style: TextStyle(
               fontSize: 14,
-              fontWeight: isStartDate || isEndDate ? FontWeight.bold : FontWeight.normal,
+              fontWeight: isStartDate || isEndDate
+                  ? FontWeight.bold
+                  : FontWeight.normal,
               color: isStartDate || isEndDate
                   ? Colors.white
                   : isInRange
@@ -957,7 +1055,8 @@ class _PromoCodeBottomSheetState extends State<PromoCodeBottomSheet> {
                 return InkWell(
                   onTap: () {
                     setState(() {
-                      _selectedCoupon = isSelected ? null : coupon['code'] as String;
+                      _selectedCoupon =
+                          isSelected ? null : coupon['code'] as String;
                     });
                   },
                   child: Container(
@@ -967,7 +1066,8 @@ class _PromoCodeBottomSheetState extends State<PromoCodeBottomSheet> {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(15),
                       border: Border.all(
-                        color: isSelected ? AppColors.red : Colors.grey.shade300,
+                        color:
+                            isSelected ? AppColors.red : Colors.grey.shade300,
                         width: isSelected ? 2 : 1,
                       ),
                     ),
@@ -980,7 +1080,8 @@ class _PromoCodeBottomSheetState extends State<PromoCodeBottomSheet> {
                             color: AppColors.red,
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.percent, color: Colors.white, size: 24),
+                          child: const Icon(Icons.percent,
+                              color: Colors.white, size: 24),
                         ),
                         const SizedBox(width: 15),
                         Expanded(
@@ -992,7 +1093,8 @@ class _PromoCodeBottomSheetState extends State<PromoCodeBottomSheet> {
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
-                                  color: isSelected ? AppColors.red : Colors.black,
+                                  color:
+                                      isSelected ? AppColors.red : Colors.black,
                                 ),
                               ),
                               const SizedBox(height: 4),
@@ -1020,7 +1122,8 @@ class _PromoCodeBottomSheetState extends State<PromoCodeBottomSheet> {
                           ),
                         ),
                         if (isSelected)
-                          const Icon(Icons.check_circle, color: AppColors.red, size: 24),
+                          const Icon(Icons.check_circle,
+                              color: AppColors.red, size: 24),
                       ],
                     ),
                   ),
@@ -1060,4 +1163,3 @@ class _PromoCodeBottomSheetState extends State<PromoCodeBottomSheet> {
     );
   }
 }
-
