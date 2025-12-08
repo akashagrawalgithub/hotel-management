@@ -1,3 +1,4 @@
+import 'package:flash_room/constants/app_constants.dart';
 import 'package:flash_room/network/dio_client_impl.dart';
 import 'package:flash_room/screens/payment_status_page.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +14,8 @@ class CheckoutPage extends StatefulWidget {
   final DateTime checkInDate;
   final DateTime checkOutDate;
   final int guestCount;
+  final int adultCount;
+  final int childCount;
   final String? selectedCoupon;
   final double? totalPrice;
 
@@ -22,6 +25,8 @@ class CheckoutPage extends StatefulWidget {
     required this.checkInDate,
     required this.checkOutDate,
     required this.guestCount,
+    required this.adultCount,
+    required this.childCount,
     this.selectedCoupon,
     this.totalPrice,
   });
@@ -34,7 +39,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
   String? _selectedCoupon;
   final service = BookingPaymentService(
     client: DioClientImpl(), // or DioClientImpl()
-    baseUrl: "https://hotel-backend-vgct.onrender.com",
+    baseUrl: AppConstants.baseUrl,
   );
 
   @override
@@ -55,7 +60,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
         return basePrice;
       }
     }
-    
+
     final hotelData = widget.hotel['hotelData'] ?? widget.hotel;
     return _getPriceValue(widget.hotel['price'] ?? hotelData['price'] ?? 0);
   }
@@ -76,7 +81,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     if (widget.totalPrice != null && widget.totalPrice! > 0) {
       return widget.totalPrice!;
     }
-    
+
     final basePrice = _basePricePerNight * _nights;
     final taxRate = _taxRate;
     if (basePrice > 0 && taxRate > 0) {
@@ -162,8 +167,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
   Widget _buildPropertyCard() {
     final hotelData = widget.hotel['hotelData'] ?? widget.hotel;
     final hotelName = widget.hotel['name'] ?? hotelData['name'] ?? '';
-    final location = widget.hotel['location'] ?? _getLocationString(hotelData) ?? '';
-    
+    final location =
+        widget.hotel['location'] ?? _getLocationString(hotelData) ?? '';
+
     // Get rating
     double rating = 0.0;
     final hotelRating = widget.hotel['rating'] ?? hotelData['rating'];
@@ -172,7 +178,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     } else if (hotelRating is Map) {
       rating = (hotelRating['average'] ?? 0.0).toDouble();
     }
-    
+
     // Get review count
     int reviewCount = 0;
     if (hotelRating is Map && hotelRating['totalReviews'] != null) {
@@ -183,7 +189,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
         reviewCount = reviews.length;
       }
     }
-    
+
     // Get image
     String? imageUrl;
     final imageData = widget.hotel['image'] ?? hotelData['images']?[0];
@@ -194,7 +200,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
         imageUrl = imageData['url'].toString();
       }
     }
-    
+
     // Get price
     final selectedRoom = widget.hotel['selectedRoom'] as Map<String, dynamic>?;
     double pricePerNight = 0.0;
@@ -203,9 +209,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
       final taxRate = _getPriceValue(selectedRoom['taxRate'] ?? 0);
       pricePerNight = basePrice + (basePrice * taxRate / 100);
     } else {
-      pricePerNight = _getPriceValue(widget.hotel['price'] ?? hotelData['price'] ?? 0);
+      pricePerNight =
+          _getPriceValue(widget.hotel['price'] ?? hotelData['price'] ?? 0);
     }
-    
+
     return Container(
       margin: const EdgeInsets.all(20),
       padding: const EdgeInsets.all(15),
@@ -299,12 +306,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
   String? _getLocationString(Map<String, dynamic> hotelData) {
     final location = hotelData['location'];
     if (location == null) return null;
-    
+
     if (location is Map) {
       final city = location['city'] ?? '';
       final state = location['state'] ?? '';
       final address = location['address'] ?? '';
-      
+
       if (city.isNotEmpty && state.isNotEmpty) {
         return '$city, $state';
       } else if (city.isNotEmpty) {
@@ -318,15 +325,17 @@ class _CheckoutPageState extends State<CheckoutPage> {
     return null;
   }
 
-  Widget _getImageWidget(String? imageUrl, {required double width, required double height}) {
+  Widget _getImageWidget(String? imageUrl,
+      {required double width, required double height}) {
     String imagePath = 'assets/images/booking.jpg';
-    
+
     if (imageUrl != null && imageUrl.isNotEmpty) {
       imagePath = imageUrl;
     }
-    
-    final isNetworkImage = imagePath.startsWith('http://') || imagePath.startsWith('https://');
-    
+
+    final isNetworkImage =
+        imagePath.startsWith('http://') || imagePath.startsWith('https://');
+
     if (isNetworkImage) {
       return Image.network(
         imagePath,
@@ -373,19 +382,19 @@ class _CheckoutPageState extends State<CheckoutPage> {
   String _formatPrice(double price) {
     if (price == 0) return '0';
     return price.toStringAsFixed(0).replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-      (Match m) => '${m[1]},',
-    );
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]},',
+        );
   }
 
   Widget _buildBookingSection() {
     final selectedRoom = widget.hotel['selectedRoom'] as Map<String, dynamic>?;
     final roomType = selectedRoom?['type'] ?? '';
-    
+
     // Get guest details from passed data
     final guestDetails = widget.hotel['guestDetails'] as Map<String, dynamic>?;
     final phone = guestDetails?['phone']?.toString() ?? '';
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(15),
@@ -491,12 +500,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
                 '₹ ${(_basePricePerNight * _nights).toStringAsFixed(0)}'),
             if (_taxRate > 0) ...[
               const SizedBox(height: 10),
-              _buildPriceItem(
-                  'Tax Rate (${_taxRate.toStringAsFixed(0)}%)',
+              _buildPriceItem('Tax Rate (${_taxRate.toStringAsFixed(0)}%)',
                   '₹ ${((_basePricePerNight * _nights) * _taxRate / 100).toStringAsFixed(0)}'),
             ],
           ] else ...[
-            _buildPriceItem('Total : $_nights ${AppLocalizations.of(context)?.nightWord ?? 'Night'}',
+            _buildPriceItem(
+                'Total : $_nights ${AppLocalizations.of(context)?.nightWord ?? 'Night'}',
                 '₹ ${_formatPrice(_totalPrice)}'),
           ],
           const Divider(height: 30),
@@ -596,7 +605,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      _selectedCoupon ?? (AppLocalizations.of(context)?.select ?? 'Select'),
+                      _selectedCoupon ??
+                          (AppLocalizations.of(context)?.select ?? 'Select'),
                       style: TextStyle(
                         fontSize: 14,
                         color: _selectedCoupon != null
@@ -705,39 +715,24 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   // TODO : use real data
   Future<void> handleBookingAndPayment(BuildContext context) async {
-    final service = BookingPaymentService(
-      client: DioClientImpl(),
-      baseUrl: "https://hotel-backend-vgct.onrender.com",
-    );
-
     try {
+      final guestDetails =
+          widget.hotel['guestDetails'] as Map<String, dynamic>?;
+
       final result = await service.startBookingPayment(
         bookingBody: {
-          "hotelId": "68e8fabe3a5edf4bc8591bf0",
-          "roomId": "68e9e77bf093ee633ca9dc2f",
-          "checkIn": "2025-12-25",
-          "checkOut": "2025-12-26",
-          "adults": 1,
-          "children": 2,
-          "guestDetails": {
-            "firstName": "Name",
-            "lastName": "Ghosh",
-            "email": "theronighosh@gmail.com",
-            "phone": "6297358939",
-            "address": {
-              "street": "Dariasudi ,Guma",
-              "city": "Dariasudi",
-              "state": "Rajasthan",
-              "postalCode": "743234",
-            },
-            "idProof": "id card",
-            "specialRequests": "",
-          },
+          "hotelId": widget.hotel['id'],
+          "roomId": widget.hotel['selectedRoom']?['_id'],
+          "checkIn": widget.checkInDate.toString(),
+          "checkOut": widget.checkOutDate.toString(),
+          "adults": widget.adultCount,
+          "children": widget.childCount,
+          "guestDetails": guestDetails,
           "roomsRequested": 1,
         },
         context: context,
       );
-
+      print('hotel data ${result}\n');
       final status = result["status"];
 
       // If cancelled → only toast, no navigation

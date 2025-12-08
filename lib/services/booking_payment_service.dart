@@ -41,6 +41,7 @@ class BookingPaymentService {
     try {
       /// STEP 1 → CREATE BOOKING
       final bookingRes = await createBooking(bookingBody);
+
       bookingData = bookingRes;
 
       final bookingId = bookingRes["bookingId"];
@@ -88,7 +89,6 @@ class BookingPaymentService {
       "$baseUrl/api/bookings/book-now",
       body,
     );
-
     if (res["success"] != true) throw "Booking Failed";
 
     return {
@@ -159,9 +159,14 @@ class BookingPaymentService {
       "key": razorpayKey,
       "amount": amount, // already in paisa from backend (330000)
       "currency": "INR",
-      "name": "Hotel Booking",
+      "name": "Flashrooms",
       "description": "Booking ID: $bookingId",
       "order_id": orderId,
+      "theme": {
+        "color": "#E70F0F" // your red color
+      },
+      "image":
+          "https://flashrooms.in/wp-content/uploads/2024/03/Black-and-White-Minimalist-Professional-Initial-Logo-2-1.png", // replace with your logo URL
       "prefill": {
         "contact": "",
         "email": "",

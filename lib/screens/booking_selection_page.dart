@@ -24,7 +24,7 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
   int _adultGuestCount = 1;
   int _childGuestCount = 0;
   String? _selectedCoupon;
-  
+
   // Guest Details Controllers
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
@@ -32,22 +32,22 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _idProofController = TextEditingController();
   String _specialRequests = 'none';
-  
+
   // Address Controllers
   final TextEditingController _addressLineController = TextEditingController();
   final TextEditingController _cityController = TextEditingController();
   final TextEditingController _stateController = TextEditingController();
   final TextEditingController _postalCodeController = TextEditingController();
-  
+
   // Room data
   List<Map<String, dynamic>> _rooms = [];
   bool _isLoadingRooms = false;
-  
+
   // Validation errors
   String? _firstNameError;
   String? _emailError;
   String? _phoneError;
-  
+
   @override
   void dispose() {
     _firstNameController.dispose();
@@ -91,9 +91,9 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
     });
 
     try {
-      final hotelId = widget.hotel['id'] ?? 
-                      widget.hotel['_id'] ?? 
-                      widget.hotel['hotelData']?['_id'];
+      final hotelId = widget.hotel['id'] ??
+          widget.hotel['_id'] ??
+          widget.hotel['hotelData']?['_id'];
       if (hotelId != null && hotelId.toString().isNotEmpty) {
         final response = await HotelService.getHotelRooms(hotelId.toString());
         if (!mounted) return;
@@ -101,7 +101,8 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
           final rooms = response.data['rooms'] as List? ?? [];
           if (!mounted) return;
           setState(() {
-            _rooms = rooms.map((room) => Map<String, dynamic>.from(room)).toList();
+            _rooms =
+                rooms.map((room) => Map<String, dynamic>.from(room)).toList();
             _isLoadingRooms = false;
           });
         } else {
@@ -148,7 +149,7 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
         return basePrice;
       }
     }
-    
+
     // Priority 2: Try to get from loaded room data
     if (_rooms.isNotEmpty) {
       final firstRoom = _rooms[0];
@@ -157,11 +158,11 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
         return basePrice;
       }
     }
-    
+
     // Priority 3: Try to get from hotelData rooms
     final hotelData = widget.hotel['hotelData'] ?? widget.hotel;
     final rooms = hotelData['rooms'] ?? [];
-    
+
     if (rooms is List && rooms.isNotEmpty) {
       final firstRoom = rooms[0];
       final basePrice = _getPriceValue(firstRoom['basePrice'] ?? 0);
@@ -169,7 +170,7 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
         return basePrice;
       }
     }
-    
+
     // Fallback to hotel price
     return _getPriceValue(widget.hotel['price'] ?? hotelData['price'] ?? 0);
   }
@@ -183,22 +184,22 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
         return taxRate;
       }
     }
-    
+
     // Priority 2: Try to get from loaded room data
     if (_rooms.isNotEmpty) {
       final firstRoom = _rooms[0];
       return _getPriceValue(firstRoom['taxRate'] ?? 0);
     }
-    
+
     // Priority 3: Try to get from hotelData rooms
     final hotelData = widget.hotel['hotelData'] ?? widget.hotel;
     final rooms = hotelData['rooms'] ?? [];
-    
+
     if (rooms is List && rooms.isNotEmpty) {
       final firstRoom = rooms[0];
       return _getPriceValue(firstRoom['taxRate'] ?? 0);
     }
-    
+
     return 0.0;
   }
 
@@ -283,8 +284,9 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
   Widget _buildPropertyCard() {
     final hotelData = widget.hotel['hotelData'] ?? widget.hotel;
     final hotelName = widget.hotel['name'] ?? hotelData['name'] ?? '';
-    final location = widget.hotel['location'] ?? _getLocationString(hotelData) ?? '';
-    
+    final location =
+        widget.hotel['location'] ?? _getLocationString(hotelData) ?? '';
+
     // Get rating
     double rating = 0.0;
     final hotelRating = widget.hotel['rating'] ?? hotelData['rating'];
@@ -293,7 +295,7 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
     } else if (hotelRating is Map) {
       rating = (hotelRating['average'] ?? 0.0).toDouble();
     }
-    
+
     // Get review count
     int reviewCount = 0;
     if (hotelRating is Map && hotelRating['totalReviews'] != null) {
@@ -304,7 +306,7 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
         reviewCount = reviews.length;
       }
     }
-    
+
     // Get image
     String? imageUrl;
     final imageData = widget.hotel['image'] ?? hotelData['images']?[0];
@@ -315,7 +317,7 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
         imageUrl = imageData['url'].toString();
       }
     }
-    
+
     return Container(
       margin: const EdgeInsets.all(20),
       padding: const EdgeInsets.all(15),
@@ -376,14 +378,14 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
                       ),
                     ),
                     if (reviewCount > 0) ...[
-                    const SizedBox(width: 8),
-                    Text(
+                      const SizedBox(width: 8),
+                      Text(
                         '$reviewCount ${AppLocalizations.of(context)?.reviews ?? 'reviews'}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                        ),
                       ),
-                    ),
                     ],
                   ],
                 ),
@@ -398,12 +400,12 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
   String? _getLocationString(Map<String, dynamic> hotelData) {
     final location = hotelData['location'];
     if (location == null) return null;
-    
+
     if (location is Map) {
       final city = location['city'] ?? '';
       final state = location['state'] ?? '';
       final address = location['address'] ?? '';
-      
+
       if (city.isNotEmpty && state.isNotEmpty) {
         return '$city, $state';
       } else if (city.isNotEmpty) {
@@ -417,15 +419,17 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
     return null;
   }
 
-  Widget _getImageWidget(String? imageUrl, {required double width, required double height}) {
+  Widget _getImageWidget(String? imageUrl,
+      {required double width, required double height}) {
     String imagePath = 'assets/images/booking.jpg';
-    
+
     if (imageUrl != null && imageUrl.isNotEmpty) {
       imagePath = imageUrl;
     }
-    
-    final isNetworkImage = imagePath.startsWith('http://') || imagePath.startsWith('https://');
-    
+
+    final isNetworkImage =
+        imagePath.startsWith('http://') || imagePath.startsWith('https://');
+
     if (isNetworkImage) {
       return Image.network(
         imagePath,
@@ -462,6 +466,7 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
   Widget _buildSelectedRoomCard() {
     final selectedRoom = widget.hotel['selectedRoom'] as Map<String, dynamic>?;
     if (selectedRoom == null) return const SizedBox.shrink();
+    print("room data $selectedRoom");
 
     final roomType = selectedRoom['type'] ?? 'Standard Room';
     final basePrice = _getPriceValue(selectedRoom['basePrice'] ?? 0);
@@ -509,9 +514,9 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
                 size: 20,
               ),
               const SizedBox(width: 8),
-          const Text(
+              const Text(
                 'Selected Room',
-            style: TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
@@ -556,7 +561,8 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        Icon(Icons.person, size: 14, color: Colors.grey.shade600),
+                        Icon(Icons.person,
+                            size: 14, color: Colors.grey.shade600),
                         const SizedBox(width: 4),
                         Text(
                           '$roomAdults Adults',
@@ -567,7 +573,8 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
                         ),
                         if (roomChildren > 0) ...[
                           const SizedBox(width: 12),
-                          Icon(Icons.child_care, size: 14, color: Colors.grey.shade600),
+                          Icon(Icons.child_care,
+                              size: 14, color: Colors.grey.shade600),
                           const SizedBox(width: 4),
                           Text(
                             '$roomChildren Children',
@@ -601,9 +608,9 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
   String _formatPrice(double price) {
     if (price == 0) return '0';
     return price.toStringAsFixed(0).replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-      (Match m) => '${m[1]},',
-    );
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]},',
+        );
   }
 
   Widget _buildDateSection() {
@@ -648,7 +655,8 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
                         Text(
                           _checkInDate != null
                               ? '${_getMonthName(_checkInDate!.month)} ${_checkInDate!.day}, ${_checkInDate!.year}'
-                              : AppLocalizations.of(context)?.select ?? 'Select',
+                              : AppLocalizations.of(context)?.select ??
+                                  'Select',
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
@@ -686,7 +694,8 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
                         Text(
                           _checkOutDate != null
                               ? '${_getMonthName(_checkOutDate!.month)} ${_checkOutDate!.day}, ${_checkOutDate!.year}'
-                              : AppLocalizations.of(context)?.select ?? 'Select',
+                              : AppLocalizations.of(context)?.select ??
+                                  'Select',
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
@@ -797,49 +806,49 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
         Text(
           label,
           style: const TextStyle(fontSize: 14, color: Colors.black),
-              ),
-              Row(
-                children: [
+        ),
+        Row(
+          children: [
             // Remove button
-                  IconButton(
-                    icon: Container(
-                      width: 35,
-                      height: 35,
-                      decoration: BoxDecoration(
-                        color: AppColors.red.withOpacity(0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.remove, color: AppColors.red, size: 18),
-                    ),
+            IconButton(
+              icon: Container(
+                width: 35,
+                height: 35,
+                decoration: BoxDecoration(
+                  color: AppColors.red.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.remove, color: AppColors.red, size: 18),
+              ),
               onPressed: onRemove,
             ),
 
             // Count
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Text(
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Text(
                 '$value',
                 style:
                     const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                  ),
+              ),
+            ),
 
             // Add button
-                  IconButton(
-                    icon: Container(
-                      width: 35,
-                      height: 35,
+            IconButton(
+              icon: Container(
+                width: 35,
+                height: 35,
                 decoration: const BoxDecoration(
-                        color: AppColors.red,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.add, color: Colors.white, size: 18),
-                    ),
-              onPressed: onAdd,
-                  ),
-                ],
+                  color: AppColors.red,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.add, color: Colors.white, size: 18),
               ),
-            ],
+              onPressed: onAdd,
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -1029,9 +1038,8 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
                 'Base Price : $_nights ${AppLocalizations.of(context)?.nightWord ?? 'Night'}',
                 '₹ ${(_basePricePerNight * _nights).toStringAsFixed(0)}'),
             if (_taxRate > 0) ...[
-          const SizedBox(height: 10),
-              _buildPriceItem(
-                  'Tax Rate (${_taxRate.toStringAsFixed(0)}%)',
+              const SizedBox(height: 10),
+              _buildPriceItem('Tax Rate (${_taxRate.toStringAsFixed(0)}%)',
                   '₹ ${((_basePricePerNight * _nights) * _taxRate / 100).toStringAsFixed(0)}'),
             ],
           ] else ...[
@@ -1098,8 +1106,8 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
           Text(
             'Guest Details',
             style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
               color: AppColors.red,
             ),
           ),
@@ -1196,16 +1204,16 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(12),
+          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: hasError ? AppColors.red : Colors.grey.shade300,
               width: hasError ? 2 : 1,
             ),
-      ),
-      child: TextField(
+          ),
+          child: TextField(
             controller: controller,
             keyboardType: keyboardType,
             onChanged: (value) {
@@ -1221,11 +1229,11 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
                 });
               }
             },
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: TextStyle(color: Colors.grey.shade600),
-          border: InputBorder.none,
-        ),
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: TextStyle(color: Colors.grey.shade600),
+              border: InputBorder.none,
+            ),
           ),
         ),
         if (hasError) ...[
@@ -1258,12 +1266,33 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
         isExpanded: true,
         underline: const SizedBox(),
         items: [
-          {'key': 'none', 'label': AppLocalizations.of(context)?.none ?? 'None'},
-          {'key': 'earlyCheckIn', 'label': AppLocalizations.of(context)?.earlyCheckIn ?? 'Early Check-in'},
-          {'key': 'lateCheckOut', 'label': AppLocalizations.of(context)?.lateCheckOut ?? 'Late Check-out'},
-          {'key': 'extraBed', 'label': AppLocalizations.of(context)?.extraBed ?? 'Extra Bed'},
-          {'key': 'babyCrib', 'label': AppLocalizations.of(context)?.babyCrib ?? 'Baby Crib'},
-          {'key': 'wheelchairAccess', 'label': AppLocalizations.of(context)?.wheelchairAccess ?? 'Wheelchair Access'},
+          {
+            'key': 'none',
+            'label': AppLocalizations.of(context)?.none ?? 'None'
+          },
+          {
+            'key': 'earlyCheckIn',
+            'label':
+                AppLocalizations.of(context)?.earlyCheckIn ?? 'Early Check-in'
+          },
+          {
+            'key': 'lateCheckOut',
+            'label':
+                AppLocalizations.of(context)?.lateCheckOut ?? 'Late Check-out'
+          },
+          {
+            'key': 'extraBed',
+            'label': AppLocalizations.of(context)?.extraBed ?? 'Extra Bed'
+          },
+          {
+            'key': 'babyCrib',
+            'label': AppLocalizations.of(context)?.babyCrib ?? 'Baby Crib'
+          },
+          {
+            'key': 'wheelchairAccess',
+            'label': AppLocalizations.of(context)?.wheelchairAccess ??
+                'Wheelchair Access'
+          },
         ].map((item) {
           return DropdownMenuItem<String>(
             value: item['key'] as String,
@@ -1335,7 +1364,9 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
                       if (_validateForm()) {
                         // Room selection should already be done in hotel detail page
                         // Just proceed to checkout with all data
-                        final hotelForCheckout = Map<String, dynamic>.from(widget.hotel);
+                        final hotelForCheckout =
+                            Map<String, dynamic>.from(widget.hotel);
+
                         hotelForCheckout['searchParams'] = {
                           'checkInDate': _checkInDate,
                           'checkOutDate': _checkOutDate,
@@ -1357,20 +1388,22 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
                             'postalCode': _postalCodeController.text.trim(),
                           },
                         };
-                        
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => CheckoutPage(
+
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => CheckoutPage(
                               hotel: hotelForCheckout,
-                            checkInDate: _checkInDate!,
-                            checkOutDate: _checkOutDate!,
-                            guestCount: _guestCount,
-                            selectedCoupon: _selectedCoupon,
-                            totalPrice: _totalPrice,
+                              checkInDate: _checkInDate!,
+                              checkOutDate: _checkOutDate!,
+                              guestCount: _guestCount,
+                              selectedCoupon: _selectedCoupon,
+                              totalPrice: _totalPrice,
+                              adultCount: _adultGuestCount,
+                              childCount: _childGuestCount,
+                            ),
                           ),
-                        ),
-                      );
+                        );
                       }
                     }
                   : null,
@@ -1435,60 +1468,65 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
 
   bool _validateForm() {
     bool isValid = true;
-    
+
     // Clear previous errors
     setState(() {
       _firstNameError = null;
       _emailError = null;
       _phoneError = null;
     });
-    
+
     // Validate First Name
     if (_firstNameController.text.trim().isEmpty) {
       setState(() {
-        _firstNameError = AppLocalizations.of(context)?.pleaseFillThisField ?? 'Please fill this field';
+        _firstNameError = AppLocalizations.of(context)?.pleaseFillThisField ??
+            'Please fill this field';
         isValid = false;
       });
     }
-    
+
     // Validate Email
     final email = _emailController.text.trim();
     if (email.isEmpty) {
       setState(() {
-        _emailError = AppLocalizations.of(context)?.pleaseFillThisField ?? 'Please fill this field';
+        _emailError = AppLocalizations.of(context)?.pleaseFillThisField ??
+            'Please fill this field';
         isValid = false;
       });
     } else if (!_isValidEmail(email)) {
       setState(() {
-        _emailError = AppLocalizations.of(context)?.pleaseEnterValidEmail ?? 'Please enter a valid email';
+        _emailError = AppLocalizations.of(context)?.pleaseEnterValidEmail ??
+            'Please enter a valid email';
         isValid = false;
       });
     }
-    
+
     // Validate Phone
     if (_phoneController.text.trim().isEmpty) {
       setState(() {
-        _phoneError = AppLocalizations.of(context)?.pleaseFillThisField ?? 'Please fill this field';
+        _phoneError = AppLocalizations.of(context)?.pleaseFillThisField ??
+            'Please fill this field';
         isValid = false;
       });
     }
-    
+
     // Scroll to first error if validation fails
     if (!isValid) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            AppLocalizations.of(context)?.pleaseFillAllMandatoryFields ?? 'Please fill all mandatory fields',
+            AppLocalizations.of(context)?.pleaseFillAllMandatoryFields ??
+                'Please fill all mandatory fields',
           ),
           backgroundColor: AppColors.red,
           duration: const Duration(seconds: 2),
         ),
       );
     }
-    
+
     return isValid;
   }
-  
+
   bool _isValidEmail(String email) {
     return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
   }
@@ -1562,7 +1600,8 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
                       final roomType = room['type'] ?? 'Standard Room';
                       final basePrice = _getPriceValue(room['basePrice'] ?? 0);
                       final taxRate = _getPriceValue(room['taxRate'] ?? 0);
-                      final finalPrice = basePrice + (basePrice * taxRate / 100);
+                      final finalPrice =
+                          basePrice + (basePrice * taxRate / 100);
                       final capacity = room['capacity'] ?? {};
                       final roomAdults = capacity['adults'] ?? 0;
                       final roomChildren = capacity['children'] ?? 0;
@@ -1573,7 +1612,8 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
                         final firstImage = images[0];
                         if (firstImage is String) {
                           imageUrl = firstImage;
-                        } else if (firstImage is Map && firstImage['url'] != null) {
+                        } else if (firstImage is Map &&
+                            firstImage['url'] != null) {
                           imageUrl = firstImage['url'].toString();
                         }
                       }
@@ -1590,7 +1630,9 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: isSelected ? AppColors.red : Colors.grey.shade300,
+                              color: isSelected
+                                  ? AppColors.red
+                                  : Colors.grey.shade300,
                               width: isSelected ? 2 : 1,
                             ),
                             boxShadow: [
@@ -1610,16 +1652,19 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
                                     topLeft: Radius.circular(16),
                                     bottomLeft: Radius.circular(16),
                                   ),
-                                  child: _getImageWidget(imageUrl, width: 120, height: 120),
+                                  child: _getImageWidget(imageUrl,
+                                      width: 120, height: 120),
                                 ),
                               Expanded(
                                 child: Padding(
                                   padding: const EdgeInsets.all(16),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
                                         children: [
                                           Expanded(
                                             child: Text(
@@ -1661,7 +1706,9 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
                                       ],
                                       Row(
                                         children: [
-                                          Icon(Icons.person, size: 16, color: Colors.grey.shade600),
+                                          Icon(Icons.person,
+                                              size: 16,
+                                              color: Colors.grey.shade600),
                                           const SizedBox(width: 4),
                                           Text(
                                             '$roomAdults Adults',
@@ -1672,7 +1719,9 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
                                           ),
                                           if (roomChildren > 0) ...[
                                             const SizedBox(width: 12),
-                                            Icon(Icons.child_care, size: 16, color: Colors.grey.shade600),
+                                            Icon(Icons.child_care,
+                                                size: 16,
+                                                color: Colors.grey.shade600),
                                             const SizedBox(width: 4),
                                             Text(
                                               '$roomChildren Children',
@@ -1736,7 +1785,8 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
                         child: ElevatedButton(
                           onPressed: selectedRoom != null
                               ? () {
-                                  final hotelWithRoom = Map<String, dynamic>.from(widget.hotel);
+                                  final hotelWithRoom =
+                                      Map<String, dynamic>.from(widget.hotel);
                                   hotelWithRoom['selectedRoom'] = selectedRoom;
                                   hotelWithRoom['searchParams'] = {
                                     'checkInDate': _checkInDate,
@@ -1746,17 +1796,20 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
                                   };
                                   // Add guest details
                                   hotelWithRoom['guestDetails'] = {
-                                    'firstName': _firstNameController.text.trim(),
+                                    'firstName':
+                                        _firstNameController.text.trim(),
                                     'lastName': _lastNameController.text.trim(),
                                     'email': _emailController.text.trim(),
                                     'phone': _phoneController.text.trim(),
                                     'idProof': _idProofController.text.trim(),
                                     'specialRequests': _specialRequests,
                                     'address': {
-                                      'street': _addressLineController.text.trim(),
+                                      'street':
+                                          _addressLineController.text.trim(),
                                       'city': _cityController.text.trim(),
                                       'state': _stateController.text.trim(),
-                                      'postalCode': _postalCodeController.text.trim(),
+                                      'postalCode':
+                                          _postalCodeController.text.trim(),
                                     },
                                   };
                                   Navigator.pop(context);
@@ -1765,14 +1818,24 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
                                   double calculatedTotal = 0.0;
                                   final room = selectedRoom;
                                   if (room != null) {
-                                    final selectedBasePrice = _getPriceValue(room['basePrice'] ?? 0);
-                                    final selectedTaxRate = _getPriceValue(room['taxRate'] ?? 0);
-                                    final nights = _checkOutDate!.difference(_checkInDate!).inDays;
-                                    final basePriceTotal = selectedBasePrice * nights;
-                                    final taxAmount = selectedTaxRate > 0 ? (basePriceTotal * selectedTaxRate / 100) : 0;
-                                    calculatedTotal = basePriceTotal + taxAmount;
+                                    final selectedBasePrice =
+                                        _getPriceValue(room['basePrice'] ?? 0);
+                                    final selectedTaxRate =
+                                        _getPriceValue(room['taxRate'] ?? 0);
+                                    final nights = _checkOutDate!
+                                        .difference(_checkInDate!)
+                                        .inDays;
+                                    final basePriceTotal =
+                                        selectedBasePrice * nights;
+                                    final taxAmount = selectedTaxRate > 0
+                                        ? (basePriceTotal *
+                                            selectedTaxRate /
+                                            100)
+                                        : 0;
+                                    calculatedTotal =
+                                        basePriceTotal + taxAmount;
                                   }
-                                  
+
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
@@ -1783,6 +1846,8 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
                                         guestCount: _guestCount,
                                         selectedCoupon: _selectedCoupon,
                                         totalPrice: calculatedTotal,
+                                        adultCount: _adultGuestCount,
+                                        childCount: _childGuestCount,
                                       ),
                                     ),
                                   );
@@ -1798,7 +1863,8 @@ class _BookingSelectionPageState extends State<BookingSelectionPage> {
                             elevation: 0,
                           ),
                           child: Text(
-                            AppLocalizations.of(context)?.continueText ?? 'Continue',
+                            AppLocalizations.of(context)?.continueText ??
+                                'Continue',
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,

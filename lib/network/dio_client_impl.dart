@@ -5,15 +5,12 @@ import '../services/booking_payment_service.dart';
 // <-- the interface
 
 class DioClientImpl implements ApiClient {
-  static const String _baseUrl = 'https://hotel-backend-vgct.onrender.com/api';
-
   late final Dio _dio;
   static bool _interceptorsInitialized = false;
 
   DioClientImpl() {
     _dio = Dio(
       BaseOptions(
-        baseUrl: _baseUrl,
         connectTimeout: const Duration(seconds: 30),
         receiveTimeout: const Duration(seconds: 30),
         headers: {
