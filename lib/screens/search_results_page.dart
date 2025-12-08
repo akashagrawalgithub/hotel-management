@@ -6,11 +6,13 @@ import 'hotel_detail_page.dart';
 class SearchResultsPage extends StatefulWidget {
   final List<Map<String, dynamic>> searchResults;
   final String searchQuery;
+  final Map<String, dynamic>? searchParams;
 
   const SearchResultsPage({
     super.key,
     required this.searchResults,
     required this.searchQuery,
+    this.searchParams,
   });
 
   @override
@@ -110,10 +112,14 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
   Widget _buildBestMatchCard(Map<String, dynamic> hotel) {
     return GestureDetector(
       onTap: () {
+        final hotelWithSearch = Map<String, dynamic>.from(hotel);
+        if (widget.searchParams != null) {
+          hotelWithSearch['searchParams'] = widget.searchParams;
+        }
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => HotelDetailPage(hotel: hotel),
+            builder: (context) => HotelDetailPage(hotel: hotelWithSearch),
           ),
         );
       },
@@ -184,7 +190,7 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      hotel['name'] ?? 'Hotel Name',
+                      hotel['name'] ?? '',
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -193,65 +199,12 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      hotel['location'] ?? 'Location not available',
+                      hotel['location'] ?? AppLocalizations.of(context)?.locationNotAvailable ?? '',
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.grey.shade600,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    if (hotel['discount'] != null) ...[
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.arrow_downward,
-                            color: Colors.green,
-                            size: 16,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            hotel['discount'] ?? '0%',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.green,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          if (hotel['originalPrice'] != null)
-                            Text(
-                              'Rs ${hotel['originalPrice']}',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.grey.shade400,
-                                decoration: TextDecoration.lineThrough,
-                              ),
-                            ),
-                          if (hotel['originalPrice'] != null) const SizedBox(width: 8),
-                          Text(
-                            'Rs ${hotel['discountedPrice'] ?? hotel['price'] ?? '0'}',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ] else ...[
-                      Text(
-                        'Rs ${hotel['price'] ?? '0'}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
-                      ),
-                    ],
                     if (hotel['rating'] != null && hotel['rating'] > 0) ...[
                       const SizedBox(height: 8),
                       Row(

@@ -20,7 +20,10 @@ class _FindPageState extends State<FindPage> {
 
   List<Map<String, dynamic>> _bestMatches = [];
   List<Map<String, dynamic>> _recommendedHotels = [];
+  List<Map<String, dynamic>> _searchResults = [];
   bool _isLoading = true;
+  bool _isSearching = false;
+  bool _isSearchMode = false;
 
   @override
   void initState() {
@@ -36,29 +39,40 @@ class _FindPageState extends State<FindPage> {
   }
 
   Future<void> _loadHotels() async {
+    if (!mounted) return;
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final response = await HotelService.getRandomHotels();
+      final response = await HotelService.getHotels();
+      if (!mounted) return;
+      
       if (response.data != null && response.data is List) {
         final hotels = response.data as List;
         setState(() {
           _bestMatches = hotels.map((hotel) {
-            final location = hotel['location'] ?? {};
-            final city = location['city'] ?? '';
-            final state = location['state'] ?? '';
-            final locationString = city.isNotEmpty && state.isNotEmpty
-                ? '$city, $state'
-                : city.isNotEmpty
-                ? city
-                : state.isNotEmpty
-                ? state
-                          : AppLocalizations.of(context)?.locationNotAvailable ?? 'Location not available';
+            // Parse location
+            String locationString = AppLocalizations.of(context)?.locationNotAvailable ?? 'Location not available';
+            final location = hotel['location'];
+            if (location != null && location is Map) {
+              final city = location['city'] ?? '';
+              final state = location['state'] ?? '';
+              final address = location['address'] ?? '';
+              if (city.isNotEmpty && state.isNotEmpty) {
+                locationString = '$city, $state';
+              } else if (city.isNotEmpty) {
+                locationString = city;
+              } else if (state.isNotEmpty) {
+                locationString = state;
+              } else if (address.isNotEmpty) {
+                locationString = address;
+              }
+            }
 
-            final images = hotel['images'] ?? [];
+            // Parse images
             String? imageUrl;
+            final images = hotel['images'] ?? [];
             if (images.isNotEmpty) {
               final firstImage = images[0];
               if (firstImage is String) {
@@ -68,18 +82,40 @@ class _FindPageState extends State<FindPage> {
               }
             }
 
+            // Parse rating
+            double rating = 0.0;
+            final ratingData = hotel['rating'];
+            if (ratingData != null && ratingData is Map) {
+              rating = (ratingData['average'] ?? 0.0).toDouble();
+            }
+
+            // Parse amenities
+            List<dynamic> amenities = [];
+            final hotelAmenities = hotel['amenities'] ?? [];
+            if (hotelAmenities is List) {
+              amenities = hotelAmenities.map((item) {
+                if (item is String) {
+                  return item;
+                } else if (item is Map && item['name'] != null) {
+                  return item['name'];
+                }
+                return item.toString();
+              }).toList();
+            }
+
+            // Parse contact
+            final contact = hotel['contact'] ?? {};
+
             return {
               'id': hotel['_id'] ?? '',
-              'name': hotel['name'] ?? 'Hotel Name',
+              'name': hotel['name'] ?? '',
               'location': locationString,
-              'originalPrice': '5,999',
-              'discountedPrice': '3,599',
-              'discount': '40%',
               'image': imageUrl ?? 'assets/images/booking.jpg',
               'description': hotel['description'] ?? '',
-              'rating': hotel['rating']?['average'] ?? 0.0,
-              'amenities': hotel['amenities'] ?? [],
-              'hotelData': hotel,
+              'rating': rating,
+              'amenities': amenities,
+              'contact': contact,
+              'hotelData': Map<String, dynamic>.from(hotel),
             };
           }).toList();
           
@@ -88,14 +124,145 @@ class _FindPageState extends State<FindPage> {
           _isLoading = false;
         });
       } else {
+        if (!mounted) return;
         setState(() {
           _isLoading = false;
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _performSearch(String query) async {
+    if (query.trim().isEmpty) {
+      setState(() {
+        _isSearchMode = false;
+        _searchResults.clear();
+      });
+      return;
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _isSearching = true;
+      _isSearchMode = true;
+    });
+
+    try {
+      final response = await HotelService.searchHotels(query.trim());
+      if (!mounted) return;
+
+      // Debug: Print response
+      print('Search response status: ${response.statusCode}');
+      print('Search response data: ${response.data}');
+
+      // Check if response has data
+      if (response.data != null) {
+        final responseData = response.data;
+        
+        // Check if success is true
+        if (responseData['success'] == true) {
+          final hotels = responseData['hotels'] ?? [];
+          print('Found ${hotels.length} hotels');
+          
+          if (!mounted) return;
+          
+          try {
+            final mappedHotels = hotels.map<Map<String, dynamic>>((hotel) {
+              final location = hotel['location'];
+              String locationString;
+              if (location != null && location is Map && location.isNotEmpty) {
+                final city = location['city'] ?? '';
+                final state = location['state'] ?? '';
+                locationString = city.isNotEmpty && state.isNotEmpty
+                    ? '$city, $state'
+                    : city.isNotEmpty
+                        ? city
+                        : state.isNotEmpty
+                            ? state
+                            : AppLocalizations.of(context)?.locationNotAvailable ?? 'Location not available';
+              } else {
+                locationString = AppLocalizations.of(context)?.locationNotAvailable ?? 'Location not available';
+              }
+
+              final images = hotel['images'] ?? [];
+              String? imageUrl;
+              if (images.isNotEmpty) {
+                final firstImage = images[0];
+                if (firstImage is String) {
+                  imageUrl = firstImage;
+                } else if (firstImage is Map && firstImage['url'] != null) {
+                  imageUrl = firstImage['url'].toString();
+                }
+              }
+
+              return {
+                'id': hotel['_id'] ?? '',
+                'name': hotel['name'] ?? '',
+                'location': locationString,
+                'image': imageUrl ?? 'assets/images/booking.jpg',
+                'description': hotel['description'] ?? '',
+                'rating': hotel['rating']?['average'] ?? 0.0,
+                'amenities': hotel['amenities'] ?? [],
+                'hotelData': hotel,
+              };
+            }).toList();
+            
+            print('Mapped ${mappedHotels.length} hotels');
+            
+            if (!mounted) return;
+            setState(() {
+              _searchResults = mappedHotels;
+              _isSearching = false;
+            });
+            
+            print('Search results set: ${_searchResults.length}');
+          } catch (e, stackTrace) {
+            print('Error mapping hotels: $e');
+            print('Stack trace: $stackTrace');
+            if (!mounted) return;
+            setState(() {
+              _searchResults = [];
+              _isSearching = false;
+            });
+          }
+        } else {
+          // Success is false or not present
+          if (!mounted) return;
+          setState(() {
+            _searchResults = [];
+            _isSearching = false;
+          });
+        }
+      } else {
+        // No data in response
+        if (!mounted) return;
+        setState(() {
+          _searchResults = [];
+          _isSearching = false;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _searchResults = [];
+        _isSearching = false;
+      });
+      
+      // Show error message to user
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Search error: ${e.toString()}'),
+            backgroundColor: AppColors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 
@@ -113,8 +280,12 @@ class _FindPageState extends State<FindPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildBestMatchSection(),
-                    _buildRecommendedSection(),
+                    if (_isSearchMode)
+                      _buildSearchResultsSection()
+                    else ...[
+                      _buildBestMatchSection(),
+                      _buildRecommendedSection(),
+                    ],
                     const SizedBox(height: 20),
                   ],
                 ),
@@ -215,6 +386,8 @@ class _FindPageState extends State<FindPage> {
                   onPressed: () {
                     setState(() {
                       _searchController.clear();
+                      _isSearchMode = false;
+                      _searchResults.clear();
                     });
                   },
                 )
@@ -223,6 +396,10 @@ class _FindPageState extends State<FindPage> {
         onChanged: (value) {
           setState(() {});
         },
+        onSubmitted: (value) {
+          _performSearch(value);
+        },
+        textInputAction: TextInputAction.search,
       ),
     );
   }
@@ -327,10 +504,15 @@ class _FindPageState extends State<FindPage> {
   Widget _buildBestMatchCard(Map<String, dynamic> hotel) {
     return GestureDetector(
       onTap: () {
+        final hotelWithContact = Map<String, dynamic>.from(hotel);
+        // Ensure contact info is passed
+        if (hotel['hotelData'] != null && hotel['hotelData']['contact'] != null) {
+          hotelWithContact['contact'] = hotel['hotelData']['contact'];
+        }
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => HotelDetailPage(hotel: hotel),
+            builder: (context) => HotelDetailPage(hotel: hotelWithContact),
           ),
         );
       },
@@ -383,47 +565,6 @@ class _FindPageState extends State<FindPage> {
                         color: Colors.grey.shade600,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.arrow_downward,
-                          color: Colors.green,
-                          size: 16,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          hotel['discount'],
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.green,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        Text(
-                          'Rs ${hotel['originalPrice']}',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey.shade400,
-                            decoration: TextDecoration.lineThrough,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Rs${hotel['discountedPrice']}',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                          ),
-                        ),
-                      ],
-                    ),
                   ],
                 ),
               ),
@@ -447,6 +588,88 @@ class _FindPageState extends State<FindPage> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildSearchResultsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (_isSearching)
+          const Padding(
+            padding: EdgeInsets.all(40.0),
+            child: Center(
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.red),
+              ),
+            ),
+          )
+        else if (_searchResults.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 60),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.search_off,
+                      size: 60,
+                      color: Colors.grey.shade400,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    AppLocalizations.of(context)?.noResultsFound ?? 'No results found',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    AppLocalizations.of(context)?.tryDifferentKeywords ?? 'Try searching with different keywords',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+            child: Text(
+              '${_searchResults.length} ${AppLocalizations.of(context)?.resultsFound ?? 'results found'}',
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+          ),
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            itemCount: _searchResults.length,
+            itemBuilder: (context, index) {
+              return _buildBestMatchCard(_searchResults[index]);
+            },
+          ),
+        ],
+      ],
     );
   }
 
@@ -484,10 +707,15 @@ class _FindPageState extends State<FindPage> {
   Widget _buildRecommendedCard(Map<String, dynamic> hotel) {
     return GestureDetector(
       onTap: () {
+        final hotelWithContact = Map<String, dynamic>.from(hotel);
+        // Ensure contact info is passed
+        if (hotel['hotelData'] != null && hotel['hotelData']['contact'] != null) {
+          hotelWithContact['contact'] = hotel['hotelData']['contact'];
+        }
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => HotelDetailPage(hotel: hotel),
+            builder: (context) => HotelDetailPage(hotel: hotelWithContact),
           ),
         );
       },
@@ -549,16 +777,8 @@ class _FindPageState extends State<FindPage> {
                       ),
                       const SizedBox(height: 8),
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          Text(
-                            '${hotel['price']}/night',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/colors.dart';
+import '../services/hotel_service.dart';
+import '../l10n/app_localizations.dart';
 
 class ContactUsPage extends StatefulWidget {
   const ContactUsPage({super.key});
@@ -13,6 +15,8 @@ class _ContactUsPageState extends State<ContactUsPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _messageController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -25,26 +29,30 @@ class _ContactUsPageState extends State<ContactUsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           children: [
-            _buildTopBar(context),
+            _buildTopBar(context, localizations),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 20),
-                    _buildContactInformationBox(),
-                    const SizedBox(height: 30),
-                    _buildIntroText(),
-                    const SizedBox(height: 20),
-                    _buildContactForm(),
-                    const SizedBox(height: 20),
-                  ],
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 20),
+                      _buildContactInformationBox(localizations),
+                      const SizedBox(height: 30),
+                      _buildIntroText(localizations),
+                      const SizedBox(height: 20),
+                      _buildContactForm(localizations),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -54,7 +62,7 @@ class _ContactUsPageState extends State<ContactUsPage> {
     );
   }
 
-  Widget _buildTopBar(BuildContext context) {
+  Widget _buildTopBar(BuildContext context, AppLocalizations? localizations) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: Row(
@@ -76,9 +84,9 @@ class _ContactUsPageState extends State<ContactUsPage> {
             ),
           ),
           const SizedBox(width: 12),
-          const Text(
-            'contact us',
-            style: TextStyle(
+          Text(
+            localizations?.contactUs ?? 'Contact Us',
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
@@ -88,7 +96,7 @@ class _ContactUsPageState extends State<ContactUsPage> {
     );
   }
 
-  Widget _buildContactInformationBox() {
+  Widget _buildContactInformationBox(AppLocalizations? localizations) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -100,9 +108,9 @@ class _ContactUsPageState extends State<ContactUsPage> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const Text(
-                'Contact Information',
-                style: TextStyle(
+              Text(
+                localizations?.contactInformation ?? 'Contact Information',
+                style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
@@ -117,11 +125,9 @@ class _ContactUsPageState extends State<ContactUsPage> {
                 ),
               ),
               const SizedBox(height: 24),
-              _buildContactItem(Icons.phone, '+103 5432 1234'),
+              _buildContactItem(Icons.phone, '+91 90033 02205'),
               const SizedBox(height: 16),
-              _buildContactItem(Icons.email, 'demo@gmail.com'),
-              const SizedBox(height: 16),
-              _buildContactItem(Icons.location_on, '123 Lotus St, Srirangam, TN 620006'),
+              _buildContactItem(Icons.email, 'info@flashrooms.in'),
               const SizedBox(height: 24),
               _buildSocialMediaIcons(),
             ],
@@ -174,9 +180,9 @@ class _ContactUsPageState extends State<ContactUsPage> {
     );
   }
 
-  Widget _buildIntroText() {
+  Widget _buildIntroText(AppLocalizations? localizations) {
     return Text(
-      'Have questions or need help? Get in touch with us today. Fill this from and will reach out to you as soon as possible.',
+      localizations?.contactUsDescription ?? 'Have questions or need help? Get in touch with us today. Fill this form and we will reach out to you as soon as possible.',
       style: TextStyle(
         fontSize: 14,
         color: Colors.grey.shade700,
@@ -185,24 +191,24 @@ class _ContactUsPageState extends State<ContactUsPage> {
     );
   }
 
-  Widget _buildContactForm() {
+  Widget _buildContactForm(AppLocalizations? localizations) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildFormField('Name', _nameController),
+        _buildFormField(localizations?.name ?? 'Name', _nameController, localizations),
         const SizedBox(height: 20),
-        _buildFormField('Email', _emailController),
+        _buildFormField(localizations?.email ?? 'Email', _emailController, localizations, isEmail: true),
         const SizedBox(height: 20),
-        _buildFormField('Phone Number', _phoneController),
+        _buildFormField(localizations?.phoneNumber ?? 'Phone Number', _phoneController, localizations),
         const SizedBox(height: 20),
-        _buildMessageField('Write your message..', _messageController),
+        _buildMessageField(localizations?.writeYourMessage ?? 'Write your message..', _messageController, localizations),
         const SizedBox(height: 30),
-        _buildSubmitButton(),
+        _buildSubmitButton(localizations),
       ],
     );
   }
 
-  Widget _buildFormField(String label, TextEditingController controller) {
+  Widget _buildFormField(String label, TextEditingController controller, AppLocalizations? localizations, {bool isEmail = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -214,13 +220,29 @@ class _ContactUsPageState extends State<ContactUsPage> {
           ),
         ),
         const SizedBox(height: 8),
-        TextField(
+        TextFormField(
           controller: controller,
+          keyboardType: isEmail ? TextInputType.emailAddress : TextInputType.text,
+          validator: (value) {
+            if (value == null || value.trim().isEmpty) {
+              return 'Please enter $label';
+            }
+            if (isEmail && !value.contains('@')) {
+              return localizations?.pleaseEnterValidEmail ?? 'Please enter a valid email';
+            }
+            return null;
+          },
           decoration: InputDecoration(
             enabledBorder: UnderlineInputBorder(
               borderSide: BorderSide(color: Colors.grey.shade300),
             ),
             focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: AppColors.red),
+            ),
+            errorBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.red),
+            ),
+            focusedErrorBorder: UnderlineInputBorder(
               borderSide: BorderSide(color: AppColors.red),
             ),
           ),
@@ -229,7 +251,7 @@ class _ContactUsPageState extends State<ContactUsPage> {
     );
   }
 
-  Widget _buildMessageField(String label, TextEditingController controller) {
+  Widget _buildMessageField(String label, TextEditingController controller, AppLocalizations? localizations) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -241,14 +263,26 @@ class _ContactUsPageState extends State<ContactUsPage> {
           ),
         ),
         const SizedBox(height: 8),
-        TextField(
+        TextFormField(
           controller: controller,
           maxLines: 5,
+          validator: (value) {
+            if (value == null || value.trim().isEmpty) {
+              return localizations?.pleaseEnterMessage ?? 'Please enter your message';
+            }
+            return null;
+          },
           decoration: InputDecoration(
             enabledBorder: UnderlineInputBorder(
               borderSide: BorderSide(color: Colors.grey.shade300),
             ),
             focusedBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: AppColors.red),
+            ),
+            errorBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.red),
+            ),
+            focusedErrorBorder: UnderlineInputBorder(
               borderSide: BorderSide(color: AppColors.red),
             ),
           ),
@@ -257,13 +291,11 @@ class _ContactUsPageState extends State<ContactUsPage> {
     );
   }
 
-  Widget _buildSubmitButton() {
+  Widget _buildSubmitButton(AppLocalizations? localizations) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: () {
-          // Handle form submission
-        },
+        onPressed: _isLoading ? null : () => _handleSubmit(localizations),
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.red,
           foregroundColor: Colors.white,
@@ -272,15 +304,111 @@ class _ContactUsPageState extends State<ContactUsPage> {
             borderRadius: BorderRadius.circular(8),
           ),
         ),
-        child: const Text(
-          'Submit',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        child: _isLoading
+            ? const SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : Text(
+                localizations?.submit ?? 'Submit',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
       ),
     );
   }
-}
 
+  Future<void> _handleSubmit(AppLocalizations? localizations) async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final response = await HotelService.createInquiry(
+        name: _nameController.text.trim(),
+        email: _emailController.text.trim(),
+        phone: _phoneController.text.trim(),
+        message: _messageController.text.trim(),
+        source: 'contact',
+      );
+
+      if (mounted) {
+        if (response.data != null && response.data['success'] == true) {
+          _clearForm();
+          _showSuccessSnackBar(localizations);
+        } else {
+          _showSnackBar(
+            localizations?.submissionFailed ?? 'Failed to submit. Please try again.',
+            isError: true,
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        _showSnackBar(
+          e.toString().replaceAll('Exception: ', ''),
+          isError: true,
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _showSuccessSnackBar(AppLocalizations? localizations) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          localizations?.thanks ?? 'Thanks',
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _showSnackBar(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : AppColors.red,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  void _clearForm() {
+    _nameController.clear();
+    _emailController.clear();
+    _phoneController.clear();
+    _messageController.clear();
+  }
+}

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/colors.dart';
+import '../services/hotel_service.dart';
+import '../l10n/app_localizations.dart';
 
 class HelpSupportPage extends StatefulWidget {
   const HelpSupportPage({super.key});
@@ -11,61 +13,90 @@ class HelpSupportPage extends StatefulWidget {
 class _HelpSupportPageState extends State<HelpSupportPage> {
   int? expandedIndex;
   final TextEditingController _searchController = TextEditingController();
+  List<FAQItem> _allFaqItems = [];
+  List<FAQItem> _filteredFaqItems = [];
+  bool _isLoading = true;
+  String? _errorMessage;
 
-  final List<FAQItem> _faqItems = [
-    FAQItem(
-      question: 'Lorem ipsum dolor sit amet',
-      answer:
-          'Amet minim mollit non deserunt ullamco est sit aliqua dolor do amet sint. Velit officia consequat duis enim velit mollit. Exercitation veniam consequat sunt nostrud amet.',
-    ),
-    FAQItem(
-      question: 'Lorem ipsum dolor sit amet',
-      answer:
-          'Amet minim mollit non deserunt ullamco est sit aliqua dolor do amet sint. Velit officia consequat duis enim velit mollit. Exercitation veniam consequat sunt nostrud amet.',
-    ),
-    FAQItem(
-      question: 'Lorem ipsum dolor sit amet',
-      answer:
-          'Amet minim mollit non deserunt ullamco est sit aliqua dolor do amet sint. Velit officia consequat duis enim velit mollit. Exercitation veniam consequat sunt nostrud amet.',
-    ),
-    FAQItem(
-      question: 'Lorem ipsum dolor sit amet',
-      answer:
-          'Amet minim mollit non deserunt ullamco est sit aliqua dolor do amet sint. Velit officia consequat duis enim velit mollit. Exercitation veniam consequat sunt nostrud amet.',
-    ),
-    FAQItem(
-      question: 'Lorem ipsum dolor sit amet',
-      answer:
-          'Amet minim mollit non deserunt ullamco est sit aliqua dolor do amet sint. Velit officia consequat duis enim velit mollit. Exercitation veniam consequat sunt nostrud amet.',
-    ),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadFAQs();
+    _searchController.addListener(_filterFAQs);
+  }
 
   @override
   void dispose() {
+    _searchController.removeListener(_filterFAQs);
     _searchController.dispose();
     super.dispose();
   }
 
+  Future<void> _loadFAQs() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final response = await HotelService.getFAQs();
+      if (response.data != null && response.data['success'] == true) {
+        final data = response.data['data'] as List;
+        setState(() {
+          _allFaqItems = data.map((item) {
+            return FAQItem(
+              id: item['_id'] ?? '',
+              question: item['question'] ?? '',
+              answer: item['answer'] ?? '',
+            );
+          }).toList();
+          _filteredFaqItems = List.from(_allFaqItems);
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _errorMessage = 'Failed to load FAQs';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Error loading FAQs: ${e.toString()}';
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _filterFAQs() {
+    final query = _searchController.text.toLowerCase().trim();
+    setState(() {
+      if (query.isEmpty) {
+        _filteredFaqItems = List.from(_allFaqItems);
+      } else {
+        _filteredFaqItems = _allFaqItems.where((item) {
+          return item.question.toLowerCase().contains(query) ||
+              item.answer.toLowerCase().contains(query);
+        }).toList();
+      }
+      expandedIndex = null;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           children: [
-            _buildTopBar(context),
+            _buildTopBar(context, localizations),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              child: _buildSearchBar(),
+              child: _buildSearchBar(localizations),
             ),
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                itemCount: _faqItems.length,
-                itemBuilder: (context, index) {
-                  return _buildAccordionItem(index);
-                },
-              ),
+              child: _buildContent(localizations),
             ),
           ],
         ),
@@ -73,7 +104,7 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
     );
   }
 
-  Widget _buildTopBar(BuildContext context) {
+  Widget _buildTopBar(BuildContext context, AppLocalizations? localizations) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: Row(
@@ -95,9 +126,9 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
             ),
           ),
           const SizedBox(width: 12),
-          const Text(
-            'Help & Support',
-            style: TextStyle(
+          Text(
+            localizations?.helpSupport ?? 'Help & Support',
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
@@ -108,7 +139,7 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
     );
   }
 
-  Widget _buildSearchBar() {
+  Widget _buildSearchBar(AppLocalizations? localizations) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.grey.shade100,
@@ -117,7 +148,7 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
       child: TextField(
         controller: _searchController,
         decoration: InputDecoration(
-          hintText: 'Find your space',
+          hintText: localizations?.searchFAQs ?? 'Search FAQs...',
           hintStyle: TextStyle(color: Colors.grey.shade400),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -126,9 +157,7 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
               ? IconButton(
                   icon: Icon(Icons.clear, color: Colors.grey.shade400, size: 20),
                   onPressed: () {
-                    setState(() {
-                      _searchController.clear();
-                    });
+                    _searchController.clear();
                   },
                 )
               : null,
@@ -140,8 +169,82 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
     );
   }
 
+  Widget _buildContent(AppLocalizations? localizations) {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(AppColors.red),
+        ),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Colors.grey.shade400,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _errorMessage!,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey.shade600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _loadFAQs,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_filteredFaqItems.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.search_off,
+              size: 64,
+              color: Colors.grey.shade400,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              localizations?.noFAQsFound ?? 'No FAQs found',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey.shade600,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      itemCount: _filteredFaqItems.length,
+      itemBuilder: (context, index) {
+        return _buildAccordionItem(index);
+      },
+    );
+  }
+
   Widget _buildAccordionItem(int index) {
-    final item = _faqItems[index];
+    final item = _filteredFaqItems[index];
     final isExpanded = expandedIndex == index;
 
     return Container(
@@ -200,12 +303,13 @@ class _HelpSupportPageState extends State<HelpSupportPage> {
 }
 
 class FAQItem {
+  final String id;
   final String question;
   final String answer;
 
   FAQItem({
+    required this.id,
     required this.question,
     required this.answer,
   });
 }
-

@@ -134,6 +134,46 @@ class AppLocalizations {
       'resetLinkSentMessage': 'We have sent a password reset link to your email address. Please check your inbox.',
       'backToLogin': 'Back to Login',
       'ok': 'OK',
+      'searchFAQs': 'Search FAQs...',
+      'noFAQsFound': 'No FAQs found',
+      'contactUs': 'Contact Us',
+      'contactInformation': 'Contact Information',
+      'contactUsDescription': 'Have questions or need help? Get in touch with us today. Fill this form and we will reach out to you as soon as possible.',
+      'phoneNumber': 'Phone Number',
+      'writeYourMessage': 'Write your message..',
+      'submit': 'Submit',
+      'success': 'Success',
+      'inquirySubmittedSuccess': 'Thank you for contacting us! We have received your message and will get back to you soon.',
+      'submissionFailed': 'Failed to submit. Please try again.',
+      'pleaseEnterMessage': 'Please enter your message',
+      'thanks': 'Thanks',
+      'noResultsFound': 'No results found',
+      'tryDifferentKeywords': 'Try searching with different keywords',
+      'resultsFound': 'results found',
+      'adults': 'Adults',
+      'children': 'Children',
+      'confirmed': 'Confirmed',
+      'pending': 'Pending',
+      'viewDetails': 'View Details',
+      'bookNow': 'Book Now',
+      'continueText': 'Continue',
+      'myFavorites': 'My Favorites',
+      'noFavoritesYet': 'No Favorites Yet',
+      'startAddingFavorites': 'Start adding hotels to your favorites',
+      'removedFromFavorites': 'Removed from favorites',
+      'payNow': 'Pay Now',
+      'specialOfferOnlyForYou': 'Special offer only for you',
+      'totalGuests': 'Total Guests',
+      'select': 'Select',
+      'none': 'None',
+      'earlyCheckIn': 'Early Check-in',
+      'lateCheckOut': 'Late Check-out',
+      'extraBed': 'Extra Bed',
+      'babyCrib': 'Baby Crib',
+      'wheelchairAccess': 'Wheelchair Access',
+      'pleaseFillThisField': 'Please fill this field',
+      'pleaseFillAllMandatoryFields': 'Please fill all mandatory fields',
+      'addedToFavorites': 'Added to favorites',
     },
     'hi': {
       'appTitle': 'फ्लैश रूम',
@@ -247,6 +287,46 @@ class AppLocalizations {
       'resetLinkSentMessage': 'हमने आपके ईमेल पते पर एक पासवर्ड रीसेट लिंक भेजा है। कृपया अपना इनबॉक्स जांचें।',
       'backToLogin': 'लॉगिन पर वापस जाएं',
       'ok': 'ठीक है',
+      'searchFAQs': 'FAQ खोजें...',
+      'noFAQsFound': 'कोई FAQ नहीं मिला',
+      'contactUs': 'संपर्क करें',
+      'contactInformation': 'संपर्क जानकारी',
+      'contactUsDescription': 'क्या आपके कोई प्रश्न हैं या मदद चाहिए? आज ही हमसे संपर्क करें। इस फॉर्म को भरें और हम जल्द ही आपसे संपर्क करेंगे।',
+      'phoneNumber': 'फोन नंबर',
+      'writeYourMessage': 'अपना संदेश लिखें..',
+      'submit': 'जमा करें',
+      'success': 'सफलता',
+      'inquirySubmittedSuccess': 'हमसे संपर्क करने के लिए धन्यवाद! हमें आपका संदेश मिल गया है और हम जल्द ही आपसे संपर्क करेंगे।',
+      'submissionFailed': 'जमा करने में विफल। कृपया पुनः प्रयास करें।',
+      'pleaseEnterMessage': 'कृपया अपना संदेश दर्ज करें',
+      'thanks': 'धन्यवाद',
+      'noResultsFound': 'कोई परिणाम नहीं मिला',
+      'tryDifferentKeywords': 'अलग कीवर्ड के साथ खोजने का प्रयास करें',
+      'resultsFound': 'परिणाम मिले',
+      'adults': 'वयस्क',
+      'children': 'बच्चे',
+      'confirmed': 'पुष्टि की गई',
+      'pending': 'लंबित',
+      'viewDetails': 'विवरण देखें',
+      'bookNow': 'अभी बुक करें',
+      'continueText': 'जारी रखें',
+      'myFavorites': 'मेरे पसंदीदा',
+      'noFavoritesYet': 'अभी तक कोई पसंदीदा नहीं',
+      'startAddingFavorites': 'अपने पसंदीदा में होटल जोड़ना शुरू करें',
+      'removedFromFavorites': 'पसंदीदा से हटा दिया गया',
+      'payNow': 'अभी भुगतान करें',
+      'specialOfferOnlyForYou': 'विशेष ऑफर केवल आपके लिए',
+      'totalGuests': 'कुल अतिथि',
+      'select': 'चुनें',
+      'none': 'कोई नहीं',
+      'earlyCheckIn': 'जल्दी चेक-इन',
+      'lateCheckOut': 'देर से चेक-आउट',
+      'extraBed': 'अतिरिक्त बिस्तर',
+      'babyCrib': 'बेबी क्रिब',
+      'wheelchairAccess': 'व्हीलचेयर पहुंच',
+      'pleaseFillThisField': 'कृपया यह फ़ील्ड भरें',
+      'pleaseFillAllMandatoryFields': 'कृपया सभी अनिवार्य फ़ील्ड भरें',
+      'addedToFavorites': 'पसंदीदा में जोड़ा गया',
     },
   };
 
@@ -367,6 +447,43 @@ class AppLocalizations {
   String get resetLinkSentMessage => translate('resetLinkSentMessage');
   String get backToLogin => translate('backToLogin');
   String get ok => translate('ok');
+  String get searchFAQs => translate('searchFAQs');
+  String get noFAQsFound => translate('noFAQsFound');
+  String get contactInformation => translate('contactInformation');
+  String get contactUsDescription => translate('contactUsDescription');
+  String get writeYourMessage => translate('writeYourMessage');
+  String get submit => translate('submit');
+  String get success => translate('success');
+  String get inquirySubmittedSuccess => translate('inquirySubmittedSuccess');
+  String get submissionFailed => translate('submissionFailed');
+  String get pleaseEnterMessage => translate('pleaseEnterMessage');
+  String get thanks => translate('thanks');
+  String get noResultsFound => translate('noResultsFound');
+  String get tryDifferentKeywords => translate('tryDifferentKeywords');
+  String get adults => translate('adults');
+  String get children => translate('children');
+  String get confirmed => translate('confirmed');
+  String get pending => translate('pending');
+  String get viewDetails => translate('viewDetails');
+  String get bookNow => translate('bookNow');
+  String get continueText => translate('continueText');
+  String get myFavorites => translate('myFavorites');
+  String get noFavoritesYet => translate('noFavoritesYet');
+  String get startAddingFavorites => translate('startAddingFavorites');
+  String get removedFromFavorites => translate('removedFromFavorites');
+  String get payNow => translate('payNow');
+  String get specialOfferOnlyForYou => translate('specialOfferOnlyForYou');
+  String get totalGuests => translate('totalGuests');
+  String get select => translate('select');
+  String get none => translate('none');
+  String get earlyCheckIn => translate('earlyCheckIn');
+  String get lateCheckOut => translate('lateCheckOut');
+  String get extraBed => translate('extraBed');
+  String get babyCrib => translate('babyCrib');
+  String get wheelchairAccess => translate('wheelchairAccess');
+  String get pleaseFillThisField => translate('pleaseFillThisField');
+  String get pleaseFillAllMandatoryFields => translate('pleaseFillAllMandatoryFields');
+  String get addedToFavorites => translate('addedToFavorites');
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

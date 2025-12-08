@@ -1,5 +1,6 @@
-package com.example.flash_room
+package com.digontom.flashrooms
 
 import io.flutter.embedding.android.FlutterActivity
 
 class MainActivity : FlutterActivity()
+

@@ -18,7 +18,8 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _locationController = TextEditingController();
-  final TextEditingController _guestController = TextEditingController();
+  final TextEditingController _adultsController = TextEditingController();
+  final TextEditingController _childrenController = TextEditingController();
   int _selectedFilterIndex = 0;
   DateTime? _selectedDate;
   DateTime? _checkInDate;
@@ -32,7 +33,8 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _guestController.text = '1';
+    _adultsController.text = '1';
+    _childrenController.text = '0';
     _loadUserName();
     _loadHotels();
   }
@@ -47,29 +49,40 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _loadHotels() async {
+    if (!mounted) return;
     setState(() {
       _isLoadingHotels = true;
     });
 
     try {
-      final response = await HotelService.getRandomHotels();
+      final response = await HotelService.getHotels();
+      if (!mounted) return;
+      
       if (response.data != null && response.data is List) {
         final hotels = response.data as List;
         setState(() {
           _hotels = hotels.map((hotel) {
-            final location = hotel['location'] ?? {};
-            final city = location['city'] ?? '';
-            final state = location['state'] ?? '';
-            final locationString = city.isNotEmpty && state.isNotEmpty
-                ? '$city, $state'
-                : city.isNotEmpty
-                    ? city
-                    : state.isNotEmpty
-                        ? state
-                        : 'Location not available';
+            // Parse location
+            String locationString = AppLocalizations.of(context)?.locationNotAvailable ?? 'Location not available';
+            final location = hotel['location'];
+            if (location != null && location is Map) {
+              final city = location['city'] ?? '';
+              final state = location['state'] ?? '';
+              final address = location['address'] ?? '';
+              if (city.isNotEmpty && state.isNotEmpty) {
+                locationString = '$city, $state';
+              } else if (city.isNotEmpty) {
+                locationString = city;
+              } else if (state.isNotEmpty) {
+                locationString = state;
+              } else if (address.isNotEmpty) {
+                locationString = address;
+              }
+            }
 
-            final images = hotel['images'] ?? [];
+            // Parse images
             String? imageUrl;
+            final images = hotel['images'] ?? [];
             if (images.isNotEmpty) {
               final firstImage = images[0];
               if (firstImage is String) {
@@ -79,26 +92,61 @@ class _HomePageState extends State<HomePage> {
               }
             }
 
+            // Parse rating
+            double rating = 0.0;
+            final ratingData = hotel['rating'];
+            if (ratingData != null && ratingData is Map) {
+              rating = (ratingData['average'] ?? 0.0).toDouble();
+            }
+
+            // Parse amenities (can be array of strings or objects)
+            List<dynamic> amenities = [];
+            final hotelAmenities = hotel['amenities'] ?? [];
+            if (hotelAmenities is List) {
+              amenities = hotelAmenities.map((item) {
+                if (item is String) {
+                  return item;
+                } else if (item is Map && item['name'] != null) {
+                  return item['name'];
+                }
+                return item.toString();
+              }).toList();
+            }
+
+            // Parse contact
+            final contact = hotel['contact'] ?? {};
+
+            // Parse price
+            final hotelPrice = _getPriceValue(
+              hotel['discountedPrice'] ?? 
+              hotel['price'] ?? 
+              hotel['basePrice'] ?? 
+              0
+            );
+
             return {
               'id': hotel['_id'] ?? '',
-              'name': hotel['name'] ?? 'Hotel Name',
+              'name': hotel['name'] ?? '',
               'location': locationString,
-              'price': '4,800',
-              'rating': hotel['rating']?['average'] ?? 0.0,
+              'price': hotelPrice == 0 ? '0' : hotelPrice.toStringAsFixed(0),
+              'rating': rating,
               'image': imageUrl ?? 'assets/images/sri.jpg',
               'description': hotel['description'] ?? '',
-              'amenities': hotel['amenities'] ?? [],
-              'hotelData': hotel,
+              'amenities': amenities,
+              'contact': contact,
+              'hotelData': Map<String, dynamic>.from(hotel),
             };
           }).toList();
           _isLoadingHotels = false;
         });
       } else {
+        if (!mounted) return;
         setState(() {
           _isLoadingHotels = false;
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoadingHotels = false;
       });
@@ -109,7 +157,8 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     _scrollController.dispose();
     _locationController.dispose();
-    _guestController.dispose();
+    _adultsController.dispose();
+    _childrenController.dispose();
     super.dispose();
   }
 
@@ -120,13 +169,13 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           children: [
             SizedBox(
-              height: 500,
+              height: 580,
               child: Stack(
                 clipBehavior: Clip.none,
                 children: [
                   _buildHeaderSection(),
                   Positioned(
-                    top: 160,
+                    top: 150,
                     left: 0,
                     right: 0,
                     child: _buildSearchForm(),
@@ -221,15 +270,17 @@ class _HomePageState extends State<HomePage> {
           Row(
             children: [
               Expanded(
-                child: _buildDateField(),
+                child: _buildAdultsField(),
               ),
               const SizedBox(width: 15),
               Expanded(
-                child: _buildGuestField(),
+                child: _buildChildrenField(),
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 15),
+          _buildDateField(),
+          const SizedBox(height: 15),
           Container(
             width: double.infinity,
             height: 50,
@@ -373,12 +424,12 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildGuestField() {
+  Widget _buildAdultsField() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          AppLocalizations.of(context)?.guest ?? 'Guest',
+          AppLocalizations.of(context)?.adults ?? 'Adults',
           style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
@@ -399,13 +450,67 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(width: 10),
               Expanded(
                 child: TextField(
-                  controller: _guestController,
+                  controller: _adultsController,
                   keyboardType: TextInputType.number,
                   inputFormatters: [
                     FilteringTextInputFormatter.digitsOnly,
                   ],
                   decoration: InputDecoration(
-                    hintText: AppLocalizations.of(context)?.addGuest ?? 'Add guest',
+                    hintText: AppLocalizations.of(context)?.adults ?? 'Adults',
+                    hintStyle: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 14,
+                    ),
+                    border: InputBorder.none,
+                    isDense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildChildrenField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          AppLocalizations.of(context)?.children ?? 'Children',
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.child_care, color: Colors.grey.shade600, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: TextField(
+                  controller: _childrenController,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                  ],
+                  decoration: InputDecoration(
+                    hintText: AppLocalizations.of(context)?.children ?? 'Children',
                     hintStyle: TextStyle(
                       color: Colors.grey.shade600,
                       fontSize: 14,
@@ -446,15 +551,15 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _performSearch() async {
+    if (!mounted) return;
     setState(() {
       _isSearching = true;
     });
 
     try {
       final city = _locationController.text.trim();
-      final guestCount = int.tryParse(_guestController.text) ?? 0;
-      final adults = guestCount; // Assuming all guests are adults for now
-      final children = 0;
+      final adults = int.tryParse(_adultsController.text) ?? 1;
+      final children = int.tryParse(_childrenController.text) ?? 0;
       
       String? startDateStr;
       String? endDateStr;
@@ -474,64 +579,136 @@ class _HomePageState extends State<HomePage> {
         endDate: endDateStr,
       );
 
+      if (!mounted) return;
+
       List<Map<String, dynamic>> searchResults = [];
 
       if (response.data != null && response.data is List) {
         final rooms = response.data as List;
         searchResults = rooms.map((room) {
-          final hotel = room['hotelId'] ?? {};
-          final location = hotel['location'] ?? {};
-          final cityName = location['city'] ?? '';
-          final state = location['state'] ?? '';
-          final locationString = cityName.isNotEmpty && state.isNotEmpty
-              ? '$cityName, $state'
-              : cityName.isNotEmpty
-                  ? cityName
-                  : state.isNotEmpty
-                      ? state
-                      : 'Location not available';
+          // Handle hotel data
+          final hotel = room['hotelId'];
+          String hotelName = 'Hotel Name';
+          String hotelId = '';
+          Map<String, dynamic> hotelData = {};
+          String locationString = AppLocalizations.of(context)?.locationNotAvailable ?? 'Location not available';
+          double rating = 0.0;
+          
+          if (hotel != null && hotel is Map) {
+            hotelId = hotel['_id'] ?? '';
+            hotelName = hotel['name'] ?? 'Hotel Name';
+            hotelData = Map<String, dynamic>.from(hotel);
+            
+            // Parse location
+            final location = hotel['location'];
+            if (location != null && location is Map) {
+              final cityName = location['city'] ?? '';
+              final state = location['state'] ?? '';
+              final address = location['address'] ?? '';
+              if (cityName.isNotEmpty && state.isNotEmpty) {
+                locationString = '$cityName, $state';
+              } else if (cityName.isNotEmpty) {
+                locationString = cityName;
+              } else if (state.isNotEmpty) {
+                locationString = state;
+              } else if (address.isNotEmpty) {
+                locationString = address;
+              }
+            }
+            
+            // Parse rating
+            final ratingData = hotel['rating'];
+            if (ratingData != null && ratingData is Map) {
+              rating = (ratingData['average'] ?? 0.0).toDouble();
+            }
+          }
 
-          final images = hotel['images'] ?? [];
-          final imageUrl = images.isNotEmpty ? images[0] : null;
+          // Handle room images (room has images array, not hotel)
+          String? imageUrl;
+          final roomImages = room['images'] ?? [];
+          if (roomImages.isNotEmpty) {
+            final firstImage = roomImages[0];
+            if (firstImage is String) {
+              imageUrl = firstImage;
+            } else if (firstImage is Map && firstImage['url'] != null) {
+              imageUrl = firstImage['url'].toString();
+            }
+          }
+          
+          // If no room images, try hotel images
+          if (imageUrl == null && hotel != null && hotel is Map) {
+            final hotelImages = hotel['images'] ?? [];
+            if (hotelImages.isNotEmpty) {
+              final firstImage = hotelImages[0];
+              if (firstImage is String) {
+                imageUrl = firstImage;
+              } else if (firstImage is Map && firstImage['url'] != null) {
+                imageUrl = firstImage['url'].toString();
+              }
+            }
+          }
 
+          // Calculate price
           final basePrice = room['basePrice'] ?? 0;
           final taxRate = room['taxRate'] ?? 0;
-          final finalPrice = basePrice + (basePrice * taxRate / 100);
+          final taxAmount = (basePrice * taxRate / 100);
+          final finalPrice = basePrice + taxAmount;
+
+          // Room details
+          final roomType = room['type'] ?? 'Room';
+          final capacity = room['capacity'] ?? {};
+          final roomAmenities = room['amenities'] ?? [];
+          final description = room['description'] ?? '';
+          final cancellationRules = room['cancellationRules'] ?? {};
 
           return {
-            'id': hotel['_id'] ?? '',
-            'name': hotel['name'] ?? 'Hotel Name',
+            'id': hotelId.isNotEmpty ? hotelId : (room['_id'] ?? ''),
+            'name': hotelName,
             'location': locationString,
             'price': finalPrice.toStringAsFixed(0),
+            'basePrice': basePrice.toString(),
             'discountedPrice': finalPrice.toStringAsFixed(0),
-            'originalPrice': (basePrice * 1.3).toStringAsFixed(0), // Simulated original price
-            'discount': '30%',
-            'rating': hotel['rating']?['average'] ?? 0.0,
+            'originalPrice': finalPrice.toStringAsFixed(0),
+            'rating': rating,
             'image': imageUrl ?? 'assets/images/sri.jpg',
-            'description': hotel['description'] ?? '',
-            'amenities': hotel['amenities'] ?? [],
-            'hotelData': hotel,
+            'description': description.isNotEmpty ? description : (hotelData['description'] ?? ''),
+            'amenities': roomAmenities.isNotEmpty ? roomAmenities : (hotelData['amenities'] ?? []),
+            'roomType': roomType,
+            'capacity': capacity,
+            'cancellationRules': cancellationRules,
+            'hotelData': hotelData.isNotEmpty ? hotelData : {},
             'roomData': room,
           };
         }).toList();
       }
 
+      if (!mounted) return;
       setState(() {
         _isSearching = false;
       });
 
       if (!mounted) return;
 
+      final searchParams = {
+        'checkInDate': _checkInDate,
+        'checkOutDate': _checkOutDate,
+        'adults': adults,
+        'children': children,
+        'city': city,
+      };
+      
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => SearchResultsPage(
             searchResults: searchResults,
             searchQuery: city.isNotEmpty ? city : 'Search',
+            searchParams: searchParams,
           ),
         ),
       );
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isSearching = false;
       });
@@ -759,10 +936,17 @@ class _HomePageState extends State<HomePage> {
   Widget _buildHotelCard(Map<String, dynamic> hotel) {
     return GestureDetector(
       onTap: () {
+        final hotelWithSearch = Map<String, dynamic>.from(hotel);
+        hotelWithSearch['searchParams'] = {
+          'checkInDate': _checkInDate,
+          'checkOutDate': _checkOutDate,
+          'adults': int.tryParse(_adultsController.text) ?? 1,
+          'children': int.tryParse(_childrenController.text) ?? 0,
+        };
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => HotelDetailPage(hotel: hotel),
+            builder: (context) => HotelDetailPage(hotel: hotelWithSearch),
           ),
         );
       },
@@ -827,16 +1011,8 @@ class _HomePageState extends State<HomePage> {
                     ),
                     const SizedBox(height: 8),
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        Text(
-                          '${hotel['price']}/night',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
@@ -873,6 +1049,17 @@ class _HomePageState extends State<HomePage> {
       ),
       ),
     );
+  }
+
+  double _getPriceValue(dynamic price) {
+    if (price == null) return 0.0;
+    if (price is num) return price.toDouble();
+    if (price is String) {
+      // Remove commas and Rs prefix
+      final cleaned = price.replaceAll(RegExp(r'[Rs,\s]'), '');
+      return double.tryParse(cleaned) ?? 0.0;
+    }
+    return 0.0;
   }
 }
 

@@ -53,6 +53,18 @@
   "pleaseEnterYourPassword": "कृपया अपना पासवर्ड दर्ज करें",
   "selectLanguage": "भाषा चुनें",
   "english": "English",
-  "hindi": "हिंदी"
+  "hindi": "हिंदी",
+  "specialOfferOnlyForYou": "विशेष ऑफर केवल आपके लिए",
+  "totalGuests": "कुल अतिथि",
+  "select": "चुनें",
+  "none": "कोई नहीं",
+  "earlyCheckIn": "जल्दी चेक-इन",
+  "lateCheckOut": "देर से चेक-आउट",
+  "extraBed": "अतिरिक्त बिस्तर",
+  "babyCrib": "बेबी क्रिब",
+  "wheelchairAccess": "व्हीलचेयर पहुंच",
+  "pleaseFillThisField": "कृपया यह फ़ील्ड भरें",
+  "pleaseFillAllMandatoryFields": "कृपया सभी अनिवार्य फ़ील्ड भरें",
+  "addedToFavorites": "पसंदीदा में जोड़ा गया"
 }
 

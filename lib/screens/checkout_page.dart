@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../constants/colors.dart';
 import '../constants/payment_states.dart';
+import '../l10n/app_localizations.dart';
 import '../services/booking_payment_service.dart';
 import 'notification_page.dart';
 
@@ -13,6 +14,7 @@ class CheckoutPage extends StatefulWidget {
   final DateTime checkOutDate;
   final int guestCount;
   final String? selectedCoupon;
+  final double? totalPrice;
 
   const CheckoutPage({
     super.key,
@@ -21,6 +23,7 @@ class CheckoutPage extends StatefulWidget {
     required this.checkOutDate,
     required this.guestCount,
     this.selectedCoupon,
+    this.totalPrice,
   });
 
   @override
@@ -44,14 +47,43 @@ class _CheckoutPageState extends State<CheckoutPage> {
     return widget.checkOutDate.difference(widget.checkInDate).inDays;
   }
 
+  double get _basePricePerNight {
+    final selectedRoom = widget.hotel['selectedRoom'] as Map<String, dynamic>?;
+    if (selectedRoom != null) {
+      final basePrice = _getPriceValue(selectedRoom['basePrice'] ?? 0);
+      if (basePrice > 0) {
+        return basePrice;
+      }
+    }
+    
+    final hotelData = widget.hotel['hotelData'] ?? widget.hotel;
+    return _getPriceValue(widget.hotel['price'] ?? hotelData['price'] ?? 0);
+  }
+
+  double get _taxRate {
+    final selectedRoom = widget.hotel['selectedRoom'] as Map<String, dynamic>?;
+    if (selectedRoom != null) {
+      final taxRate = _getPriceValue(selectedRoom['taxRate'] ?? 0);
+      if (taxRate > 0) {
+        return taxRate;
+      }
+    }
+    return 0.0;
+  }
+
   double get _totalPrice {
-    double pricePerNight =
-        double.tryParse(widget.hotel['price']?.toString() ?? '480') ?? 480.0;
-    double basePrice = pricePerNight * _nights;
-    double cleaningFee = 15.0;
-    double serviceFee = 40.0;
-    double discount = _selectedCoupon != null ? 100.0 : 0.0;
-    return basePrice + cleaningFee + serviceFee - discount;
+    // Use passed totalPrice if available, otherwise calculate
+    if (widget.totalPrice != null && widget.totalPrice! > 0) {
+      return widget.totalPrice!;
+    }
+    
+    final basePrice = _basePricePerNight * _nights;
+    final taxRate = _taxRate;
+    if (basePrice > 0 && taxRate > 0) {
+      final taxAmount = (basePrice * taxRate / 100);
+      return basePrice + taxAmount;
+    }
+    return basePrice;
   }
 
   @override
@@ -128,6 +160,52 @@ class _CheckoutPageState extends State<CheckoutPage> {
   }
 
   Widget _buildPropertyCard() {
+    final hotelData = widget.hotel['hotelData'] ?? widget.hotel;
+    final hotelName = widget.hotel['name'] ?? hotelData['name'] ?? '';
+    final location = widget.hotel['location'] ?? _getLocationString(hotelData) ?? '';
+    
+    // Get rating
+    double rating = 0.0;
+    final hotelRating = widget.hotel['rating'] ?? hotelData['rating'];
+    if (hotelRating is num) {
+      rating = hotelRating.toDouble();
+    } else if (hotelRating is Map) {
+      rating = (hotelRating['average'] ?? 0.0).toDouble();
+    }
+    
+    // Get review count
+    int reviewCount = 0;
+    if (hotelRating is Map && hotelRating['totalReviews'] != null) {
+      reviewCount = (hotelRating['totalReviews'] as num).toInt();
+    } else {
+      final reviews = hotelData['reviews'] ?? [];
+      if (reviews is List) {
+        reviewCount = reviews.length;
+      }
+    }
+    
+    // Get image
+    String? imageUrl;
+    final imageData = widget.hotel['image'] ?? hotelData['images']?[0];
+    if (imageData != null) {
+      if (imageData is String) {
+        imageUrl = imageData;
+      } else if (imageData is Map && imageData['url'] != null) {
+        imageUrl = imageData['url'].toString();
+      }
+    }
+    
+    // Get price
+    final selectedRoom = widget.hotel['selectedRoom'] as Map<String, dynamic>?;
+    double pricePerNight = 0.0;
+    if (selectedRoom != null) {
+      final basePrice = _getPriceValue(selectedRoom['basePrice'] ?? 0);
+      final taxRate = _getPriceValue(selectedRoom['taxRate'] ?? 0);
+      pricePerNight = basePrice + (basePrice * taxRate / 100);
+    } else {
+      pricePerNight = _getPriceValue(widget.hotel['price'] ?? hotelData['price'] ?? 0);
+    }
+    
     return Container(
       margin: const EdgeInsets.all(20),
       padding: const EdgeInsets.all(15),
@@ -147,12 +225,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: Image.asset(
-              widget.hotel['image'] ?? 'assets/images/booking.jpg',
-              width: 100,
-              height: 100,
-              fit: BoxFit.cover,
-            ),
+            child: _getImageWidget(imageUrl, width: 100, height: 100),
           ),
           const SizedBox(width: 15),
           Expanded(
@@ -160,24 +233,28 @@ class _CheckoutPageState extends State<CheckoutPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  widget.hotel['name'] ?? 'Sri Ranganadha Nilayam',
+                  hotelName,
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: AppColors.red,
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  widget.hotel['location'] ?? 'Sriangam,tamil nadu',
+                  location,
                   style: TextStyle(
                     fontSize: 13,
                     color: Colors.grey.shade600,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Rs ${widget.hotel['price'] ?? '480'} /night',
+                  '₹ ${_formatPrice(pricePerNight)} /night',
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -196,7 +273,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       color: AppColors.gradientStart, size: 18),
                   const SizedBox(width: 4),
                   Text(
-                    widget.hotel['rating']?.toString() ?? '4.5',
+                    rating.toStringAsFixed(1),
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
@@ -206,7 +283,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
               ),
               const SizedBox(height: 4),
               Text(
-                '549 reviews',
+                '$reviewCount reviews',
                 style: TextStyle(
                   fontSize: 12,
                   color: Colors.grey.shade600,
@@ -219,7 +296,96 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
+  String? _getLocationString(Map<String, dynamic> hotelData) {
+    final location = hotelData['location'];
+    if (location == null) return null;
+    
+    if (location is Map) {
+      final city = location['city'] ?? '';
+      final state = location['state'] ?? '';
+      final address = location['address'] ?? '';
+      
+      if (city.isNotEmpty && state.isNotEmpty) {
+        return '$city, $state';
+      } else if (city.isNotEmpty) {
+        return city;
+      } else if (state.isNotEmpty) {
+        return state;
+      } else if (address.isNotEmpty) {
+        return address;
+      }
+    }
+    return null;
+  }
+
+  Widget _getImageWidget(String? imageUrl, {required double width, required double height}) {
+    String imagePath = 'assets/images/booking.jpg';
+    
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      imagePath = imageUrl;
+    }
+    
+    final isNetworkImage = imagePath.startsWith('http://') || imagePath.startsWith('https://');
+    
+    if (isNetworkImage) {
+      return Image.network(
+        imagePath,
+        width: width,
+        height: height,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Image.asset(
+            'assets/images/booking.jpg',
+            width: width,
+            height: height,
+            fit: BoxFit.cover,
+          );
+        },
+      );
+    } else {
+      return Image.asset(
+        imagePath,
+        width: width,
+        height: height,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Image.asset(
+            'assets/images/booking.jpg',
+            width: width,
+            height: height,
+            fit: BoxFit.cover,
+          );
+        },
+      );
+    }
+  }
+
+  double _getPriceValue(dynamic price) {
+    if (price == null) return 0.0;
+    if (price is num) return price.toDouble();
+    if (price is String) {
+      final cleaned = price.replaceAll(RegExp(r'[₹Rs,\s]'), '');
+      return double.tryParse(cleaned) ?? 0.0;
+    }
+    return 0.0;
+  }
+
+  String _formatPrice(double price) {
+    if (price == 0) return '0';
+    return price.toStringAsFixed(0).replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]},',
+    );
+  }
+
   Widget _buildBookingSection() {
+    final selectedRoom = widget.hotel['selectedRoom'] as Map<String, dynamic>?;
+    final roomType = selectedRoom?['type'] ?? '';
+    
+    // Get guest details from passed data
+    final guestDetails = widget.hotel['guestDetails'] as Map<String, dynamic>?;
+    final phone = guestDetails?['phone']?.toString() ?? '';
+    
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(15),
@@ -251,18 +417,22 @@ class _CheckoutPageState extends State<CheckoutPage> {
             'Guest',
             '${widget.guestCount} Guests (1 Room)',
           ),
-          const SizedBox(height: 15),
-          _buildBookingItem(
-            Icons.bed,
-            'Room type',
-            'Queen Room',
-          ),
-          const SizedBox(height: 15),
-          _buildBookingItem(
-            Icons.phone,
-            'Phone',
-            '0214345646',
-          ),
+          if (selectedRoom != null && roomType.isNotEmpty) ...[
+            const SizedBox(height: 15),
+            _buildBookingItem(
+              Icons.bed,
+              'Room type',
+              roomType,
+            ),
+          ],
+          if (phone.isNotEmpty) ...[
+            const SizedBox(height: 15),
+            _buildBookingItem(
+              Icons.phone,
+              'Phone',
+              phone,
+            ),
+          ],
         ],
       ),
     );
@@ -315,15 +485,20 @@ class _CheckoutPageState extends State<CheckoutPage> {
             ),
           ),
           const SizedBox(height: 15),
-          _buildPriceItem('Total : $_nights Night',
-              'Rs ${((double.tryParse(widget.hotel['price']?.toString() ?? '480') ?? 480.0) * _nights).toStringAsFixed(0)}'),
-          const SizedBox(height: 10),
-          _buildPriceItem('Cleaning Fee', 'Rs 15'),
-          const SizedBox(height: 10),
-          _buildPriceItem('Service Fee', 'Rs 40'),
-          const SizedBox(height: 10),
-          _buildPriceItem(
-              'Discount', 'Rs ${_selectedCoupon != null ? '100' : '0'}'),
+          if (_basePricePerNight > 0) ...[
+            _buildPriceItem(
+                'Base Price : $_nights ${AppLocalizations.of(context)?.nightWord ?? 'Night'}',
+                '₹ ${(_basePricePerNight * _nights).toStringAsFixed(0)}'),
+            if (_taxRate > 0) ...[
+              const SizedBox(height: 10),
+              _buildPriceItem(
+                  'Tax Rate (${_taxRate.toStringAsFixed(0)}%)',
+                  '₹ ${((_basePricePerNight * _nights) * _taxRate / 100).toStringAsFixed(0)}'),
+            ],
+          ] else ...[
+            _buildPriceItem('Total : $_nights ${AppLocalizations.of(context)?.nightWord ?? 'Night'}',
+                '₹ ${_formatPrice(_totalPrice)}'),
+          ],
           const Divider(height: 30),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -337,7 +512,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                 ),
               ),
               Text(
-                'Rs ${_totalPrice.toStringAsFixed(0)}',
+                '₹ ${_totalPrice.toStringAsFixed(0)}',
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -421,7 +596,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      _selectedCoupon ?? 'Select',
+                      _selectedCoupon ?? (AppLocalizations.of(context)?.select ?? 'Select'),
                       style: TextStyle(
                         fontSize: 14,
                         color: _selectedCoupon != null
@@ -491,7 +666,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Rs ${_totalPrice.toStringAsFixed(0)}',
+                  '₹ ${_totalPrice.toStringAsFixed(0)}',
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -1008,7 +1183,7 @@ class _PromoCodeBottomSheetState extends State<PromoCodeBottomSheet> {
     return Container(
       height: MediaQuery.of(context).size.height * 0.7,
       decoration: const BoxDecoration(
-        color: Color(0xFFFDF9E0),
+        color: Colors.white,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(30),
           topRight: Radius.circular(30),

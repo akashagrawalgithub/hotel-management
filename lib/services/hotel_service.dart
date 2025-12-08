@@ -53,11 +53,11 @@ class HotelService {
     }
   }
 
-  // Get random hotels
-  static Future<Response> getRandomHotels() async {
+  // Get all FAQs
+  static Future<Response> getFAQs() async {
     try {
       _setupInterceptors();
-      final response = await _dio.get('/hotel/get-random');
+      final response = await _dio.get('/faq/all');
       return response;
     } catch (e) {
       rethrow;
@@ -171,6 +171,139 @@ class HotelService {
     try {
       _setupInterceptors();
       return await _dio.delete(endpoint);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Create inquiry/contact form submission
+  static Future<Response> createInquiry({
+    required String name,
+    required String email,
+    required String phone,
+    required String message,
+    String source = 'contact',
+  }) async {
+    try {
+      _setupInterceptors();
+      final response = await _dio.post(
+        '/inquiries/create',
+        data: {
+          'name': name,
+          'email': email,
+          'phone': phone,
+          'message': message,
+          'source': source,
+        },
+      );
+      return response;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Search hotels by query
+  static Future<Response> searchHotels(String query) async {
+    try {
+      _setupInterceptors();
+      final response = await _dio.get(
+        '/hotel/search',
+        queryParameters: {'query': query},
+      );
+      return response;
+    } catch (e) {
+      if (e is DioException) {
+        // Handle Dio errors
+        if (e.response != null) {
+          // Server responded with error status
+          throw Exception('Search failed: ${e.response?.statusCode} - ${e.response?.data}');
+        } else {
+          // Network or other error
+          throw Exception('Network error: ${e.message}');
+        }
+      }
+      rethrow;
+    }
+  }
+
+  // Get favorites list by userId
+  static Future<Response> getFavorites(String userId) async {
+    try {
+      _setupInterceptors();
+      final response = await _dio.get(
+        '/auth/favorite/list',
+        queryParameters: {'userId': userId},
+      );
+      return response;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Add to favorites
+  static Future<Response> addToFavorites(String userId, String itemId) async {
+    try {
+      _setupInterceptors();
+      final response = await _dio.post(
+        '/auth/favorite/add',
+        data: {
+          'userId': userId,
+          'itemId': itemId,
+        },
+      );
+      return response;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Remove from favorites
+  static Future<Response> removeFromFavorites(String userId, String itemId) async {
+    try {
+      _setupInterceptors();
+      final response = await _dio.post(
+        '/auth/favorite/remove',
+        data: {
+          'userId': userId,
+          'itemId': itemId,
+        },
+      );
+      return response;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // Get hotel by ID - fetches all hotels and filters by ID
+  static Future<Response> getHotelById(String hotelId) async {
+    try {
+      _setupInterceptors();
+      // Try specific endpoint first
+      try {
+        final response = await _dio.get('/hotel/get-hotel/$hotelId');
+        return response;
+      } catch (_) {
+        // Fallback: get all hotels and filter
+        final allHotelsResponse = await getHotels();
+        if (allHotelsResponse.data != null && allHotelsResponse.data is List) {
+          final hotels = allHotelsResponse.data as List;
+          final hotel = hotels.firstWhere(
+            (h) => (h['_id'] ?? h['id']).toString() == hotelId,
+          );
+          // Create a new response with the hotel data
+          return Response(
+            requestOptions: allHotelsResponse.requestOptions,
+            data: hotel,
+            statusCode: 200,
+            statusMessage: 'OK',
+            headers: allHotelsResponse.headers,
+            isRedirect: false,
+            redirects: [],
+            extra: allHotelsResponse.extra,
+          );
+        }
+        throw Exception('Hotel not found');
+      }
     } catch (e) {
       rethrow;
     }

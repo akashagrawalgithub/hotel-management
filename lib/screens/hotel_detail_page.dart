@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import '../constants/colors.dart';
 import '../services/hotel_service.dart';
+import '../services/auth_service.dart';
+import '../l10n/app_localizations.dart';
 import 'booking_selection_page.dart';
+import 'checkout_page.dart' show DatePickerBottomSheet;
 
 class HotelDetailPage extends StatefulWidget {
   final Map<String, dynamic> hotel;
@@ -16,24 +19,200 @@ class HotelDetailPage extends StatefulWidget {
 }
 
 class _HotelDetailPageState extends State<HotelDetailPage> {
-  final List<String> _galleryImages = const [
-    'assets/images/booking.jpg',
-    'assets/images/sri.jpg',
-    'assets/images/loginbg.png',
-    'assets/images/booking.jpg',
-    'assets/images/sri.jpg',
-  ];
+  List<String> _galleryImages = [];
 
   List<Map<String, dynamic>> _recommendedHotels = [];
   bool _isLoadingRecommended = true;
   List<Map<String, dynamic>> _rooms = [];
   bool _isLoadingRooms = true;
+  bool _isFavorite = false;
+  bool _isLoadingFavorite = false;
+
+  bool _hasContactInfo() {
+    final contact = widget.hotel['contact'] ?? widget.hotel['hotelData']?['contact'] ?? {};
+    return (contact['phone'] != null && contact['phone'].toString().isNotEmpty) ||
+           (contact['email'] != null && contact['email'].toString().isNotEmpty) ||
+           (contact['website'] != null && contact['website'].toString().isNotEmpty);
+  }
+
+  double _getRating() {
+    final hotelData = widget.hotel['hotelData'] ?? widget.hotel;
+    final rating = widget.hotel['rating'] ?? hotelData['rating'];
+    
+    if (rating is num) {
+      return rating.toDouble();
+    } else if (rating is Map) {
+      return (rating['average'] ?? 0.0).toDouble();
+    } else if (rating is String) {
+      return double.tryParse(rating) ?? 0.0;
+    }
+    return 0.0;
+  }
+
+  int _getReviewCount() {
+    final hotelData = widget.hotel['hotelData'] ?? widget.hotel;
+    final rating = widget.hotel['rating'] ?? hotelData['rating'];
+    
+    if (rating is Map && rating['totalReviews'] != null) {
+      return (rating['totalReviews'] as num).toInt();
+    }
+    
+    final reviews = hotelData['reviews'] ?? [];
+    if (reviews is List) {
+      return reviews.length;
+    }
+    
+    return 0;
+  }
+
+  double _getPriceFromHotel(Map<String, dynamic> hotel) {
+    final hotelData = hotel['hotelData'] ?? hotel;
+    final price = hotel['discountedPrice'] ?? hotel['price'] ?? hotelData['discountedPrice'] ?? hotelData['price'];
+    return _getPriceValue(price);
+  }
+
+  double _getTotalPrice() {
+    // Get base price from hotel
+    final hotelData = widget.hotel['hotelData'] ?? widget.hotel;
+    final price = _getPriceValue(
+      widget.hotel['discountedPrice'] ?? 
+      widget.hotel['price'] ?? 
+      hotelData['discountedPrice'] ?? 
+      hotelData['price']
+    );
+    
+    // If we have rooms, try to get price from first room
+    if (price == 0 && _rooms.isNotEmpty) {
+      final firstRoom = _rooms[0];
+      final basePrice = _getPriceValue(firstRoom['basePrice']);
+      final taxRate = _getPriceValue(firstRoom['taxRate']);
+      if (basePrice > 0) {
+        return basePrice + (basePrice * taxRate / 100);
+      }
+    }
+    
+    return price;
+  }
 
   @override
   void initState() {
     super.initState();
+    _loadGalleryImages();
     _loadRecommendedHotels();
     _loadHotelRooms();
+    _checkFavoriteStatus();
+  }
+
+  Future<void> _checkFavoriteStatus() async {
+    try {
+      final userId = await AuthService.getUserId();
+      if (userId == null || userId.isEmpty) return;
+
+      final hotelId = widget.hotel['_id'] ?? 
+                      widget.hotel['id'] ?? 
+                      widget.hotel['hotelData']?['_id'] ?? '';
+      if (hotelId.isEmpty) return;
+
+      final response = await HotelService.getFavorites(userId);
+      if (response.data != null && response.data['success'] == true) {
+        final favorites = response.data['favorites'] as List<dynamic>? ?? [];
+        if (mounted) {
+          setState(() {
+            _isFavorite = favorites.contains(hotelId.toString());
+          });
+        }
+      }
+    } catch (e) {
+      // Silently fail
+    }
+  }
+
+  Future<void> _toggleFavorite() async {
+    if (_isLoadingFavorite) return;
+
+    setState(() {
+      _isLoadingFavorite = true;
+    });
+
+    try {
+      final userId = await AuthService.getUserId();
+      if (userId == null || userId.isEmpty) {
+        if (mounted) {
+          _showSnackBar('Please login to add favorites');
+        }
+        setState(() {
+          _isLoadingFavorite = false;
+        });
+        return;
+      }
+
+      final hotelId = widget.hotel['_id'] ?? 
+                      widget.hotel['id'] ?? 
+                      widget.hotel['hotelData']?['_id'] ?? '';
+      if (hotelId.isEmpty) {
+        setState(() {
+          _isLoadingFavorite = false;
+        });
+        return;
+      }
+
+      if (_isFavorite) {
+        await HotelService.removeFromFavorites(userId, hotelId.toString());
+        if (mounted) {
+          _showSnackBar(AppLocalizations.of(context)?.removedFromFavorites ?? 'Removed from favorites');
+        }
+      } else {
+        await HotelService.addToFavorites(userId, hotelId.toString());
+        if (mounted) {
+          _showSnackBar(AppLocalizations.of(context)?.addedToFavorites ?? 'Added to favorites');
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _isFavorite = !_isFavorite;
+          _isLoadingFavorite = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        _showSnackBar('Error: ${e.toString()}');
+        setState(() {
+          _isLoadingFavorite = false;
+        });
+      }
+    }
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.red,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  void _loadGalleryImages() {
+    final hotelData = widget.hotel['hotelData'] ?? widget.hotel;
+    final images = hotelData['images'] ?? [];
+    
+    _galleryImages = [];
+    if (images.isNotEmpty) {
+      for (var image in images) {
+        if (image is String) {
+          _galleryImages.add(image);
+        } else if (image is Map && image['url'] != null) {
+          _galleryImages.add(image['url'].toString());
+        }
+      }
+    }
   }
 
   Future<void> _loadHotelRooms() async {
@@ -69,29 +248,40 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
   }
 
   Future<void> _loadRecommendedHotels() async {
+    if (!mounted) return;
     setState(() {
       _isLoadingRecommended = true;
     });
 
     try {
-      final response = await HotelService.getRandomHotels();
+      final response = await HotelService.getHotels();
+      if (!mounted) return;
+      
       if (response.data != null && response.data is List) {
         final hotels = response.data as List;
         setState(() {
           _recommendedHotels = hotels.map((hotel) {
-            final location = hotel['location'] ?? {};
-            final city = location['city'] ?? '';
-            final state = location['state'] ?? '';
-            final locationString = city.isNotEmpty && state.isNotEmpty
-                ? '$city, $state'
-                : city.isNotEmpty
-                    ? city
-                    : state.isNotEmpty
-                        ? state
-                        : 'Location not available';
+            // Parse location
+            String locationString = AppLocalizations.of(context)?.locationNotAvailable ?? 'Location not available';
+            final location = hotel['location'];
+            if (location != null && location is Map) {
+              final city = location['city'] ?? '';
+              final state = location['state'] ?? '';
+              final address = location['address'] ?? '';
+              if (city.isNotEmpty && state.isNotEmpty) {
+                locationString = '$city, $state';
+              } else if (city.isNotEmpty) {
+                locationString = city;
+              } else if (state.isNotEmpty) {
+                locationString = state;
+              } else if (address.isNotEmpty) {
+                locationString = address;
+              }
+            }
 
-            final images = hotel['images'] ?? [];
+            // Parse images
             String? imageUrl;
+            final images = hotel['images'] ?? [];
             if (images.isNotEmpty) {
               final firstImage = images[0];
               if (firstImage is String) {
@@ -101,26 +291,61 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
               }
             }
 
+            // Parse rating
+            double rating = 0.0;
+            final ratingData = hotel['rating'];
+            if (ratingData != null && ratingData is Map) {
+              rating = (ratingData['average'] ?? 0.0).toDouble();
+            }
+
+            // Parse amenities
+            List<dynamic> amenities = [];
+            final hotelAmenities = hotel['amenities'] ?? [];
+            if (hotelAmenities is List) {
+              amenities = hotelAmenities.map((item) {
+                if (item is String) {
+                  return item;
+                } else if (item is Map && item['name'] != null) {
+                  return item['name'];
+                }
+                return item.toString();
+              }).toList();
+            }
+
+            // Parse contact
+            final contact = hotel['contact'] ?? {};
+
+            // Get price from hotel data
+            final hotelPrice = _getPriceValue(
+              hotel['discountedPrice'] ?? 
+              hotel['price'] ?? 
+              hotel['basePrice'] ?? 
+              0
+            );
+
             return {
               'id': hotel['_id'] ?? '',
-              'name': hotel['name'] ?? 'Hotel Name',
+              'name': hotel['name'] ?? '',
               'location': locationString,
-              'price': '4,800',
-              'rating': hotel['rating']?['average'] ?? 0.0,
+              'price': hotelPrice == 0 ? '0' : hotelPrice.toString(),
+              'rating': rating,
               'image': imageUrl ?? 'assets/images/sri.jpg',
               'description': hotel['description'] ?? '',
-              'amenities': hotel['amenities'] ?? [],
-              'hotelData': hotel,
+              'amenities': amenities,
+              'contact': contact,
+              'hotelData': Map<String, dynamic>.from(hotel),
             };
           }).toList();
           _isLoadingRecommended = false;
         });
       } else {
+        if (!mounted) return;
         setState(() {
           _isLoadingRecommended = false;
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoadingRecommended = false;
       });
@@ -135,6 +360,7 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
           _buildImageSection(),
           _buildContentSection(context),
           _buildBackButton(context),
+          _buildFavoriteButton(context),
           _buildBottomBar(context),
         ],
       ),
@@ -158,10 +384,12 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
       }
     }
     
+    final isNetworkImage = imageUrl.startsWith('http://') || imageUrl.startsWith('https://');
+    
     return Container(
       height: 400,
       width: double.infinity,
-      child: imageUrl.startsWith('http') || imageUrl.startsWith('https')
+      child: isNetworkImage
           ? Image.network(
               imageUrl,
               width: double.infinity,
@@ -181,6 +409,14 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
               width: double.infinity,
               height: double.infinity,
               fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Image.asset(
+                  'assets/images/booking.jpg',
+                  width: double.infinity,
+                  height: double.infinity,
+                  fit: BoxFit.cover,
+                );
+              },
             ),
     );
   }
@@ -199,6 +435,41 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
           child: IconButton(
             icon: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
             onPressed: () => Navigator.pop(context),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFavoriteButton(BuildContext context) {
+    return SafeArea(
+      child: Align(
+        alignment: Alignment.topRight,
+        child: Padding(
+          padding: const EdgeInsets.all(15),
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.9),
+              shape: BoxShape.circle,
+            ),
+            child: _isLoadingFavorite
+                ? const Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.red),
+                    ),
+                  )
+                : IconButton(
+                    icon: Icon(
+                      _isFavorite ? Icons.favorite : Icons.favorite_border,
+                      color: _isFavorite ? AppColors.red : Colors.grey.shade600,
+                      size: 20,
+                    ),
+                    onPressed: _toggleFavorite,
+                  ),
           ),
         ),
       ),
@@ -231,16 +502,24 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildSpecialOffer(),
+                        if (widget.hotel['searchParams'] != null) ...[
+                          const SizedBox(height: 20),
+                          _buildSearchParamsSection(),
+                        ],
                         const SizedBox(height: 20),
                         _buildHotelInfo(),
                         const SizedBox(height: 20),
                         _buildRoomsSection(),
-                        const SizedBox(height: 20),
-                        _buildDescription(),
+                        if (widget.hotel['description'] != null && widget.hotel['description'].toString().isNotEmpty) ...[
+                          const SizedBox(height: 20),
+                          _buildDescription(),
+                        ],
                         const SizedBox(height: 20),
                         _buildGallery(),
-                        const SizedBox(height: 20),
-                        _buildOwnerSection(),
+                        if (_hasContactInfo()) ...[
+                          const SizedBox(height: 20),
+                          _buildOwnerSection(),
+                        ],
                         const SizedBox(height: 20),
                         _buildRecommendedSection(context),
                         const SizedBox(height: 100),
@@ -269,11 +548,32 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
   }
 
   Widget _buildSpecialOffer() {
+    // Get pricing data
+    final hotelData = widget.hotel['hotelData'] ?? widget.hotel;
+    final discountedPrice = _getPriceValue(widget.hotel['discountedPrice'] ?? hotelData['discountedPrice'] ?? widget.hotel['price'] ?? hotelData['price']);
+    final originalPrice = _getPriceValue(widget.hotel['originalPrice'] ?? hotelData['originalPrice']);
+    final discount = widget.hotel['discount'] ?? hotelData['discount'];
+    
+    // Calculate discount percentage if we have both prices
+    String discountPercent = '0%';
+    if (originalPrice > 0 && discountedPrice > 0 && originalPrice > discountedPrice) {
+      final discountValue = ((originalPrice - discountedPrice) / originalPrice * 100).round();
+      discountPercent = '$discountValue%';
+    } else if (discount != null) {
+      discountPercent = discount.toString().contains('%') ? discount.toString() : '$discount%';
+    }
+
+    final hasDiscount = (originalPrice > 0 && discountedPrice > 0 && originalPrice > discountedPrice) || (discount != null && discountPercent != '0%');
+
+    if (!hasDiscount && discountedPrice == 0) {
+      return const SizedBox.shrink();
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Special offer only for you',
+          AppLocalizations.of(context)?.specialOfferOnlyForYou ?? 'Special offer only for you',
           style: TextStyle(
             fontSize: 14,
             color: Colors.grey.shade600,
@@ -282,29 +582,33 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
         const SizedBox(height: 8),
         Row(
           children: [
-            const Icon(Icons.arrow_downward, color: Colors.green, size: 20),
-            const SizedBox(width: 4),
-            const Text(
-              '40%',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.green,
+            if (hasDiscount) ...[
+              const Icon(Icons.arrow_downward, color: Colors.green, size: 20),
+              const SizedBox(width: 4),
+              Text(
+                discountPercent,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green,
+                ),
               ),
-            ),
-            const SizedBox(width: 15),
+              const SizedBox(width: 15),
+            ],
+            if (originalPrice > 0 && discountedPrice > 0 && originalPrice > discountedPrice) ...[
+              Text(
+                '₹ ${_formatPrice(originalPrice)}',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade400,
+                  decoration: TextDecoration.lineThrough,
+                ),
+              ),
+              const SizedBox(width: 10),
+            ],
             Text(
-              'Rs 5,999',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade400,
-                decoration: TextDecoration.lineThrough,
-              ),
-            ),
-            const SizedBox(width: 10),
-            const Text(
-              'Rs 480/night',
-              style: TextStyle(
+              '₹ ${_formatPrice(discountedPrice)}/night',
+              style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: Colors.black,
@@ -313,6 +617,25 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
           ],
         ),
       ],
+    );
+  }
+
+  double _getPriceValue(dynamic price) {
+    if (price == null) return 0.0;
+    if (price is num) return price.toDouble();
+    if (price is String) {
+      // Remove commas and Rs prefix
+      final cleaned = price.replaceAll(RegExp(r'[Rs,\s]'), '');
+      return double.tryParse(cleaned) ?? 0.0;
+    }
+    return 0.0;
+  }
+
+  String _formatPrice(double price) {
+    if (price == 0) return '0';
+    return price.toStringAsFixed(0).replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]},',
     );
   }
 
@@ -325,7 +648,7 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                widget.hotel['name'] ?? 'Sri Rangandha Nilayam',
+                widget.hotel['name'] ?? '',
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -334,7 +657,7 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
               ),
               const SizedBox(height: 4),
               Text(
-                widget.hotel['location'] ?? 'Sriangam, tamil nadu',
+                widget.hotel['location'] ?? '',
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.grey.shade600,
@@ -351,7 +674,7 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
                 const Icon(Icons.star, color: AppColors.gradientStart, size: 20),
                 const SizedBox(width: 4),
                 Text(
-                  widget.hotel['rating']?.toString() ?? '4.8',
+                  _getRating().toString(),
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -362,7 +685,7 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
             ),
             const SizedBox(height: 4),
             Text(
-              '549 reviews',
+              '${_getReviewCount()} reviews',
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey.shade600,
@@ -408,8 +731,8 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
     final adults = capacity['adults'] ?? 0;
     final children = capacity['children'] ?? 0;
     final total = capacity['total'] ?? 0;
-    final basePrice = room['basePrice'] ?? 0;
-    final taxRate = room['taxRate'] ?? 0;
+    final basePrice = _getPriceValue(room['basePrice'] ?? 0);
+    final taxRate = _getPriceValue(room['taxRate'] ?? 0);
     final finalPrice = basePrice + (basePrice * taxRate / 100);
     final roomType = room['type'] ?? 'Standard';
     final description = room['description'] ?? '';
@@ -484,26 +807,59 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text(
+                  roomType.toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Price Details
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Expanded(
-                      child: Text(
-                        roomType.toUpperCase(),
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Base Price: ₹${basePrice.toStringAsFixed(0)}',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey.shade700,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Tax Rate: ${taxRate.toStringAsFixed(0)}%',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey.shade700,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    Text(
-                      '₹${finalPrice.toStringAsFixed(0)}/night',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.red,
-                      ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          'Total: ₹${finalPrice.toStringAsFixed(0)}',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.red,
+                          ),
+                        ),
+                        Text(
+                          '/night',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -634,6 +990,8 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
   }
 
   Widget _buildGallery() {
+    if (_galleryImages.isEmpty) return const SizedBox.shrink();
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -652,6 +1010,7 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
             scrollDirection: Axis.horizontal,
             itemCount: _galleryImages.length,
             itemBuilder: (context, index) {
+              final imageUrl = _galleryImages[index];
               return Container(
                 width: 100,
                 margin: const EdgeInsets.only(right: 10),
@@ -660,10 +1019,27 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  child: Image.asset(
-                    _galleryImages[index],
-                    fit: BoxFit.cover,
-                  ),
+                  child: (imageUrl.startsWith('http://') || imageUrl.startsWith('https://'))
+                      ? Image.network(
+                          imageUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: Colors.grey.shade300,
+                              child: const Icon(Icons.image, color: Colors.grey),
+                            );
+                          },
+                        )
+                      : Image.asset(
+                          imageUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: Colors.grey.shade300,
+                              child: const Icon(Icons.image, color: Colors.grey),
+                            );
+                          },
+                        ),
                 ),
               );
             },
@@ -673,12 +1049,89 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
     );
   }
 
+  Widget _buildSearchParamsSection() {
+    final searchParams = widget.hotel['searchParams'] as Map<String, dynamic>?;
+    if (searchParams == null) return const SizedBox.shrink();
+
+    final checkIn = searchParams['checkInDate'] as DateTime?;
+    final checkOut = searchParams['checkOutDate'] as DateTime?;
+    final adults = searchParams['adults'] ?? 0;
+    final children = searchParams['children'] ?? 0;
+
+    return Container(
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: Colors.blue.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.search, color: Colors.blue.shade700, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Search Details',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue.shade900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (checkIn != null && checkOut != null) ...[
+            _buildSearchParamRow(Icons.calendar_today, 'Check-in: ${_formatDate(checkIn)}'),
+            const SizedBox(height: 8),
+            _buildSearchParamRow(Icons.calendar_today, 'Check-out: ${_formatDate(checkOut)}'),
+            const SizedBox(height: 8),
+          ],
+          if (adults > 0) ...[
+            _buildSearchParamRow(Icons.person, 'Adults: $adults'),
+            if (children > 0) const SizedBox(height: 8),
+          ],
+          if (children > 0)
+            _buildSearchParamRow(Icons.child_care, 'Children: $children'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchParamRow(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: Colors.blue.shade700),
+        const SizedBox(width: 8),
+        Text(
+          text,
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.blue.shade900,
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${date.day} ${months[date.month - 1]} ${date.year}';
+  }
+
   Widget _buildOwnerSection() {
+    final contact = widget.hotel['contact'] ?? widget.hotel['hotelData']?['contact'] ?? {};
+    final phone = contact['phone']?.toString() ?? '';
+    final email = contact['email']?.toString() ?? '';
+    final website = contact['website']?.toString() ?? '';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Owner',
+          'Contact Information',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -692,53 +1145,59 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
             color: AppColors.red,
             borderRadius: BorderRadius.circular(15),
           ),
-          child: Row(
+          child: Column(
             children: [
-              Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.person, size: 30, color: AppColors.red),
-              ),
-              const SizedBox(width: 15),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Parkash Raj',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Owner',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.chat, color: Colors.white, size: 24),
-                onPressed: () {},
-              ),
-              IconButton(
-                icon: const Icon(Icons.phone, color: Colors.white, size: 24),
-                onPressed: () {},
-              ),
+              if (phone.isNotEmpty) ...[
+                _buildContactRow(Icons.phone, phone, () {
+                  // Handle phone call
+                }),
+                if (email.isNotEmpty || website.isNotEmpty) const SizedBox(height: 12),
+              ],
+              if (email.isNotEmpty) ...[
+                _buildContactRow(Icons.email, email, () {
+                  // Handle email
+                }),
+                if (website.isNotEmpty) const SizedBox(height: 12),
+              ],
+              if (website.isNotEmpty)
+                _buildContactRow(Icons.language, website, () {
+                  // Handle website
+                }),
             ],
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildContactRow(IconData icon, String text, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: Colors.white, size: 20),
+          ),
+          const SizedBox(width: 15),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.white,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -767,11 +1226,16 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
                       itemBuilder: (context, index) {
                         return GestureDetector(
                           onTap: () {
+                            final hotel = Map<String, dynamic>.from(_recommendedHotels[index]);
+                            // Pass search params if available
+                            if (widget.hotel['searchParams'] != null) {
+                              hotel['searchParams'] = widget.hotel['searchParams'];
+                            }
                             Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (context) => HotelDetailPage(
-                                  hotel: _recommendedHotels[index],
+                                  hotel: hotel,
                                 ),
                               ),
                             );
@@ -785,7 +1249,7 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
     );
   }
 
-  Widget _getImageWidget(dynamic imageData) {
+  Widget _getImageWidget(dynamic imageData, {double? width, double? height}) {
     String imagePath = 'assets/images/sri.jpg';
     
     if (imageData != null) {
@@ -801,17 +1265,21 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
       }
     }
 
-    if (imagePath.startsWith('http') || imagePath.startsWith('https')) {
+    final isNetworkImage = imagePath.startsWith('http://') || imagePath.startsWith('https://');
+    final imageWidth = width ?? double.infinity;
+    final imageHeight = height ?? double.infinity;
+    
+    if (isNetworkImage) {
       return Image.network(
         imagePath,
-        width: double.infinity,
-        height: double.infinity,
+        width: imageWidth,
+        height: imageHeight,
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) {
           return Image.asset(
             'assets/images/sri.jpg',
-            width: double.infinity,
-            height: double.infinity,
+            width: imageWidth,
+            height: imageHeight,
             fit: BoxFit.cover,
           );
         },
@@ -819,14 +1287,14 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
     } else {
       return Image.asset(
         imagePath,
-        width: double.infinity,
-        height: double.infinity,
+        width: imageWidth,
+        height: imageHeight,
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) {
           return Image.asset(
             'assets/images/sri.jpg',
-            width: double.infinity,
-            height: double.infinity,
+            width: imageWidth,
+            height: imageHeight,
             fit: BoxFit.cover,
           );
         },
@@ -896,16 +1364,8 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
                     ),
                     const SizedBox(height: 8),
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        Text(
-                          '${hotel['price']}/night',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
@@ -980,9 +1440,9 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
                   ),
                 ),
                 const SizedBox(height: 2),
-                const Text(
-                  'Rs 4,599',
-                  style: TextStyle(
+                Text(
+                  '₹ ${_formatPrice(_getTotalPrice())}',
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: AppColors.red,
@@ -992,12 +1452,7 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
             ),
             ElevatedButton(
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => BookingSelectionPage(hotel: widget.hotel),
-                  ),
-                );
+                _handleBookNow();
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.red,
@@ -1018,6 +1473,830 @@ class _HotelDetailPageState extends State<HotelDetailPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _handleBookNow() async {
+    final searchParams = widget.hotel['searchParams'] as Map<String, dynamic>?;
+    
+    if (searchParams != null && 
+        searchParams['checkInDate'] != null && 
+        searchParams['checkOutDate'] != null &&
+        searchParams['adults'] != null) {
+      // Search params exist, always check for rooms first
+      final hotelWithParams = Map<String, dynamic>.from(widget.hotel);
+      hotelWithParams['searchParams'] = searchParams;
+      
+      final checkInDate = searchParams['checkInDate'] as DateTime?;
+      final checkOutDate = searchParams['checkOutDate'] as DateTime?;
+      final adults = searchParams['adults'] as int? ?? 0;
+      final children = searchParams['children'] as int? ?? 0;
+      
+      if (checkInDate != null && checkOutDate != null) {
+        // Use rooms from detail page if available, otherwise fetch
+        List<Map<String, dynamic>> availableRooms = [];
+        
+        if (_rooms.isNotEmpty) {
+          // Use rooms already loaded in detail page
+          // Filter by guest capacity if needed
+          availableRooms = _rooms.where((room) {
+            final capacity = room['capacity'] ?? {};
+            final roomAdults = capacity['adults'] ?? 0;
+            final roomChildren = capacity['children'] ?? 0;
+            // Check if room can accommodate the guests
+            return roomAdults >= adults && (roomChildren >= children || children == 0);
+          }).toList();
+        } else {
+          // Fallback: fetch rooms if not loaded
+          final hotelId = widget.hotel['id'] ?? 
+                          widget.hotel['_id'] ?? 
+                          widget.hotel['hotelData']?['_id'] ?? '';
+          final hotelData = widget.hotel['hotelData'] ?? widget.hotel;
+          final location = hotelData['location'] ?? {};
+          final city = location['city'] ?? '';
+          
+          // Format dates for API
+          final startDate = checkInDate.toUtc().toIso8601String();
+          final endDate = checkOutDate.toUtc().toIso8601String();
+          
+          try {
+            final roomsResponse = await HotelService.getAllRooms(
+              city: city.isNotEmpty ? city : null,
+              adults: adults,
+              children: children,
+              startDate: startDate,
+              endDate: endDate,
+            );
+            
+            if (roomsResponse.data != null && roomsResponse.data is List) {
+              final allRooms = roomsResponse.data as List;
+              // Filter rooms for this specific hotel
+              availableRooms = allRooms
+                  .where((room) {
+                    final roomHotelId = room['hotelId'];
+                    if (roomHotelId is Map) {
+                      return (roomHotelId['_id'] ?? '').toString() == hotelId.toString();
+                    } else if (roomHotelId is String) {
+                      return roomHotelId == hotelId.toString();
+                    }
+                    return false;
+                  })
+                  .map((room) => Map<String, dynamic>.from(room))
+                  .toList();
+            }
+          } catch (e) {
+            // On error, proceed without room selection
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => BookingSelectionPage(hotel: hotelWithParams),
+              ),
+            );
+            return;
+          }
+        }
+        
+        if (availableRooms.isNotEmpty) {
+          // Always show room selection, even if only 1 room
+          _showRoomSelectionDialog(
+            context,
+            availableRooms,
+            hotelWithParams,
+          );
+        } else {
+          // No rooms available, proceed directly
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => BookingSelectionPage(hotel: hotelWithParams),
+            ),
+          );
+        }
+      } else {
+        // No dates, show booking details dialog first
+        _showBookingDetailsDialog();
+      }
+    } else {
+      // Show dialog to collect booking details
+      _showBookingDetailsDialog();
+    }
+  }
+
+  void _showBookingDetailsDialog() {
+    DateTime? checkInDate;
+    DateTime? checkOutDate;
+    int adults = 0;
+    int children = 0;
+    final adultsController = TextEditingController(text: '0');
+    final childrenController = TextEditingController(text: '0');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return Container(
+            decoration: const BoxDecoration(
+              color: Color(0xFFFDF9E0),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(30),
+                topRight: Radius.circular(30),
+              ),
+            ),
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.only(top: 10, bottom: 20),
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          AppLocalizations.of(context)?.bookNow ?? 'Book Now',
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.grey),
+                          onPressed: () => Navigator.pop(context),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    // Check-in Date
+                    Text(
+                      AppLocalizations.of(context)?.checkIn ?? 'Check-in Date',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    InkWell(
+                      onTap: () {
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (bottomSheetContext) => DatePickerBottomSheet(
+                            checkInDate: checkInDate,
+                            checkOutDate: checkOutDate,
+                            onDatesSelected: (checkIn, checkOut) {
+                              setDialogState(() {
+                                checkInDate = checkIn;
+                                checkOutDate = checkOut;
+                              });
+                              // Don't close the bottom sheet automatically
+                            },
+                          ),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          border: Border.all(
+                            color: checkInDate != null ? AppColors.red : Colors.grey.shade300,
+                            width: checkInDate != null ? 2 : 1,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              checkInDate != null
+                                  ? '${checkInDate!.day}/${checkInDate!.month}/${checkInDate!.year}'
+                                  : AppLocalizations.of(context)?.selectDate ?? 'Select Date',
+                              style: TextStyle(
+                                color: checkInDate != null ? Colors.black : Colors.grey.shade600,
+                                fontSize: 15,
+                                fontWeight: checkInDate != null ? FontWeight.w600 : FontWeight.normal,
+                              ),
+                            ),
+                            Icon(
+                              Icons.calendar_today,
+                              size: 20,
+                              color: checkInDate != null ? AppColors.red : Colors.grey.shade600,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    // Check-out Date
+                    Text(
+                      AppLocalizations.of(context)?.checkOut ?? 'Check-out Date',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    InkWell(
+                      onTap: () {
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (bottomSheetContext) => DatePickerBottomSheet(
+                            checkInDate: checkInDate,
+                            checkOutDate: checkOutDate,
+                            onDatesSelected: (checkIn, checkOut) {
+                              setDialogState(() {
+                                checkInDate = checkIn;
+                                checkOutDate = checkOut;
+                              });
+                              // Don't close the bottom sheet automatically
+                            },
+                          ),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          border: Border.all(
+                            color: checkOutDate != null ? AppColors.red : Colors.grey.shade300,
+                            width: checkOutDate != null ? 2 : 1,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              checkOutDate != null
+                                  ? '${checkOutDate!.day}/${checkOutDate!.month}/${checkOutDate!.year}'
+                                  : AppLocalizations.of(context)?.selectDate ?? 'Select Date',
+                              style: TextStyle(
+                                color: checkOutDate != null ? Colors.black : Colors.grey.shade600,
+                                fontSize: 15,
+                                fontWeight: checkOutDate != null ? FontWeight.w600 : FontWeight.normal,
+                              ),
+                            ),
+                            Icon(
+                              Icons.calendar_today,
+                              size: 20,
+                              color: checkOutDate != null ? AppColors.red : Colors.grey.shade600,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    // Adults and Children Row
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                AppLocalizations.of(context)?.adults ?? 'Adults',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              TextField(
+                                controller: adultsController,
+                                keyboardType: TextInputType.number,
+                                textAlign: TextAlign.center,
+                                decoration: InputDecoration(
+                                  hintText: '0',
+                                  filled: true,
+                                  fillColor: Colors.grey.shade50,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(color: Colors.grey.shade300),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(color: Colors.grey.shade300),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(color: AppColors.red, width: 2),
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                                ),
+                                onChanged: (value) {
+                                  adults = int.tryParse(value) ?? 0;
+                                  if (adults < 0) adults = 0;
+                                  setDialogState(() {});
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                AppLocalizations.of(context)?.children ?? 'Children',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              TextField(
+                                controller: childrenController,
+                                keyboardType: TextInputType.number,
+                                textAlign: TextAlign.center,
+                                decoration: InputDecoration(
+                                  hintText: '0',
+                                  filled: true,
+                                  fillColor: Colors.grey.shade50,
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(color: Colors.grey.shade300),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(color: Colors.grey.shade300),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(color: AppColors.red, width: 2),
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                                ),
+                                onChanged: (value) {
+                                  children = int.tryParse(value) ?? 0;
+                                  if (children < 0) children = 0;
+                                  setDialogState(() {});
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 28),
+                    // Action Buttons
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                            },
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              side: BorderSide(color: Colors.grey.shade300),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: Text(
+                              AppLocalizations.of(context)?.cancel ?? 'Cancel',
+                              style: TextStyle(
+                                color: Colors.grey.shade700,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: ElevatedButton(
+                            onPressed: checkInDate != null && checkOutDate != null && adults > 0
+                                ? () async {
+                                    final hotelWithParams = Map<String, dynamic>.from(widget.hotel);
+                                    hotelWithParams['searchParams'] = {
+                                      'checkInDate': checkInDate,
+                                      'checkOutDate': checkOutDate,
+                                      'adults': adults,
+                                      'children': children,
+                                    };
+                                    
+                                    Navigator.pop(context);
+                                    
+                                    // Use rooms from detail page if available, filter by guest capacity
+                                    List<Map<String, dynamic>> availableRooms = [];
+                                    
+                                    if (_rooms.isNotEmpty) {
+                                      // Use rooms already loaded in detail page
+                                      // Filter by guest capacity if needed
+                                      availableRooms = _rooms.where((room) {
+                                        final capacity = room['capacity'] ?? {};
+                                        final roomAdults = capacity['adults'] ?? 0;
+                                        final roomChildren = capacity['children'] ?? 0;
+                                        // Check if room can accommodate the guests
+                                        return roomAdults >= adults && (roomChildren >= children || children == 0);
+                                      }).toList();
+                                    } else {
+                                      // Fallback: fetch rooms if not loaded
+                                      final hotelId = widget.hotel['id'] ?? 
+                                                      widget.hotel['_id'] ?? 
+                                                      widget.hotel['hotelData']?['_id'] ?? '';
+                                      final hotelData = widget.hotel['hotelData'] ?? widget.hotel;
+                                      final location = hotelData['location'] ?? {};
+                                      final city = location['city'] ?? '';
+                                      
+                                      // Format dates for API
+                                      final startDate = checkInDate!.toUtc().toIso8601String();
+                                      final endDate = checkOutDate!.toUtc().toIso8601String();
+                                      
+                                      try {
+                                        final roomsResponse = await HotelService.getAllRooms(
+                                          city: city.isNotEmpty ? city : null,
+                                          adults: adults,
+                                          children: children,
+                                          startDate: startDate,
+                                          endDate: endDate,
+                                        );
+                                        
+                                        if (roomsResponse.data != null && roomsResponse.data is List) {
+                                          final allRooms = roomsResponse.data as List;
+                                          // Filter rooms for this specific hotel
+                                          availableRooms = allRooms
+                                              .where((room) {
+                                                final roomHotelId = room['hotelId'];
+                                                if (roomHotelId is Map) {
+                                                  return (roomHotelId['_id'] ?? '').toString() == hotelId.toString();
+                                                } else if (roomHotelId is String) {
+                                                  return roomHotelId == hotelId.toString();
+                                                }
+                                                return false;
+                                              })
+                                              .map((room) => Map<String, dynamic>.from(room))
+                                              .toList();
+                                        }
+                                      } catch (e) {
+                                        // On error, proceed without room selection
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => BookingSelectionPage(hotel: hotelWithParams),
+                                          ),
+                                        );
+                                        return;
+                                      }
+                                    }
+                                    
+                                    if (availableRooms.isNotEmpty) {
+                                      // Always show room selection, even if only 1 room
+                                      _showRoomSelectionDialog(
+                                        context,
+                                        availableRooms,
+                                        hotelWithParams,
+                                      );
+                                    } else {
+                                      // No rooms available, proceed directly
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => BookingSelectionPage(hotel: hotelWithParams),
+                                        ),
+                                      );
+                                    }
+                                  }
+                                : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.red,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: Text(
+                              AppLocalizations.of(context)?.continueText ?? 'Continue',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showRoomSelectionDialog(
+    BuildContext context,
+    List<Map<String, dynamic>> rooms,
+    Map<String, dynamic> hotelWithParams,
+  ) {
+    // Auto-select if only 1 room
+    Map<String, dynamic>? selectedRoom = rooms.length == 1 ? rooms[0] : null;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return Container(
+            decoration: const BoxDecoration(
+              color: Color(0xFFFDF9E0),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(30),
+                topRight: Radius.circular(30),
+              ),
+            ),
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.9,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(top: 10, bottom: 20),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Select Room',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.grey),
+                        onPressed: () => Navigator.pop(context),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Flexible(
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    itemCount: rooms.length,
+                    itemBuilder: (context, index) {
+                      final room = rooms[index];
+                      final isSelected = selectedRoom?['_id'] == room['_id'];
+                      final roomType = room['type'] ?? 'Standard Room';
+                      final basePrice = _getPriceValue(room['basePrice'] ?? 0);
+                      final taxRate = _getPriceValue(room['taxRate'] ?? 0);
+                      final finalPrice = basePrice + (basePrice * taxRate / 100);
+                      final capacity = room['capacity'] ?? {};
+                      final roomAdults = capacity['adults'] ?? 0;
+                      final roomChildren = capacity['children'] ?? 0;
+                      final description = room['description'] ?? '';
+                      final amenities = room['amenities'] ?? [];
+                      final images = room['images'] ?? [];
+                      String? imageUrl;
+                      if (images.isNotEmpty) {
+                        final firstImage = images[0];
+                        if (firstImage is String) {
+                          imageUrl = firstImage;
+                        } else if (firstImage is Map && firstImage['url'] != null) {
+                          imageUrl = firstImage['url'].toString();
+                        }
+                      }
+
+                      return GestureDetector(
+                        onTap: () {
+                          setDialogState(() {
+                            selectedRoom = room;
+                          });
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isSelected ? AppColors.red : Colors.grey.shade300,
+                              width: isSelected ? 2 : 1,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 10,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (imageUrl != null)
+                                ClipRRect(
+                                  borderRadius: const BorderRadius.only(
+                                    topLeft: Radius.circular(16),
+                                    bottomLeft: Radius.circular(16),
+                                  ),
+                                  child: _getImageWidget(imageUrl, width: 120, height: 120),
+                                ),
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              roomType,
+                                              style: const TextStyle(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.black,
+                                              ),
+                                            ),
+                                          ),
+                                          if (isSelected)
+                                            Container(
+                                              padding: const EdgeInsets.all(4),
+                                              decoration: const BoxDecoration(
+                                                color: AppColors.red,
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: const Icon(
+                                                Icons.check,
+                                                color: Colors.white,
+                                                size: 16,
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      if (description.isNotEmpty) ...[
+                                        Text(
+                                          description,
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.grey.shade700,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 8),
+                                      ],
+                                      Row(
+                                        children: [
+                                          Icon(Icons.person, size: 16, color: Colors.grey.shade600),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            '$roomAdults Adults',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey.shade600,
+                                            ),
+                                          ),
+                                          if (roomChildren > 0) ...[
+                                            const SizedBox(width: 12),
+                                            Icon(Icons.child_care, size: 16, color: Colors.grey.shade600),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              '$roomChildren Children',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey.shade600,
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        '₹ ${_formatPrice(finalPrice)}/night',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.red,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            side: BorderSide(color: Colors.grey.shade300),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            AppLocalizations.of(context)?.cancel ?? 'Cancel',
+                            style: TextStyle(
+                              color: Colors.grey.shade700,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton(
+                          onPressed: selectedRoom != null
+                              ? () {
+                                  hotelWithParams['selectedRoom'] = selectedRoom;
+                                  Navigator.pop(context);
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => BookingSelectionPage(hotel: hotelWithParams),
+                                    ),
+                                  );
+                                }
+                              : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.red,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: Text(
+                            AppLocalizations.of(context)?.continueText ?? 'Continue',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

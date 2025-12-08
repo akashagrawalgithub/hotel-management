@@ -53,6 +53,18 @@
   "pleaseEnterYourPassword": "Please enter your password",
   "selectLanguage": "Select Language",
   "english": "English",
-  "hindi": "हिंदी"
+  "hindi": "हिंदी",
+  "specialOfferOnlyForYou": "Special offer only for you",
+  "totalGuests": "Total Guests",
+  "select": "Select",
+  "none": "None",
+  "earlyCheckIn": "Early Check-in",
+  "lateCheckOut": "Late Check-out",
+  "extraBed": "Extra Bed",
+  "babyCrib": "Baby Crib",
+  "wheelchairAccess": "Wheelchair Access",
+  "pleaseFillThisField": "Please fill this field",
+  "pleaseFillAllMandatoryFields": "Please fill all mandatory fields",
+  "addedToFavorites": "Added to favorites"
 }
 
