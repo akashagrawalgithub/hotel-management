@@ -168,24 +168,81 @@ class _HomePageState extends State<HomePage> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            SizedBox(
-              height: 580,
-              child: Stack(
-                clipBehavior: Clip.none,
+            // Header with background image
+            Container(
+              height: 280,
+              decoration: BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage('assets/images/searchBg.png'),
+                  fit: BoxFit.cover,
+                ),
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(20),
+                  bottomRight: Radius.circular(20),
+                ),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withOpacity(0.3),
+                      Colors.black.withOpacity(0.5),
+                    ],
+                  ),
+                ),
+                child: Stack(
+                  children: [
+                    Positioned(
+                      top: 70,
+                      left: 20,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${AppLocalizations.of(context)?.hey ?? 'Hey'} ${_userName ?? 'User'} 👋',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            AppLocalizations.of(context)?.letsStartJourney ?? "Let's start your journey!",
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // Overlap the search form
+            Transform.translate(
+              offset: const Offset(0, -130),
+              child: Column(
                 children: [
-                  _buildHeaderSection(),
-                  Positioned(
-                    top: 150,
-                    left: 0,
-                    right: 0,
-                    child: _buildSearchForm(),
+                  _buildSearchForm(),
+                  const SizedBox(height: 20),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: _buildFilterButtons(),
                   ),
                 ],
               ),
             ),
-                        const SizedBox(height: 20),
-
-            _buildHotelSection(),
+            Transform.translate(
+              offset: const Offset(0, -95),
+              child: _buildHotelSection(),
+            ),
             const SizedBox(height: 20),
           ],
         ),
@@ -198,10 +255,15 @@ class _HomePageState extends State<HomePage> {
       height: 280,
       decoration: BoxDecoration(
         image: DecorationImage(
-          image: AssetImage('assets/images/loginbg.png'),
+          image: AssetImage('assets/images/searchBg.png'),
           fit: BoxFit.cover,
         ),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
+        ),
       ),
+      clipBehavior: Clip.antiAlias,
       child: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -224,17 +286,17 @@ class _HomePageState extends State<HomePage> {
                   Text(
                     '${AppLocalizations.of(context)?.hey ?? 'Hey'} ${_userName ?? 'User'} 👋',
                     style: TextStyle(
-                      color: AppColors.gradientStart,
-                      fontSize: 16,
+                      color: Colors.white,
+                      fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 4),
                   Text(
                     AppLocalizations.of(context)?.letsStartJourney ?? "Let's start your journey!",
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 28,
+                      fontSize: 24,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -249,7 +311,7 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildSearchForm() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
+      margin: const EdgeInsets.symmetric(horizontal: 18),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -264,31 +326,67 @@ class _HomePageState extends State<HomePage> {
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text(
+            AppLocalizations.of(context)?.location ?? 'Location',
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
+            ),
+          ),
+          const SizedBox(height: 8),
           _buildLocationField(),
-          const SizedBox(height: 15),
+          const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
-                child: _buildAdultsField(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      AppLocalizations.of(context)?.date ?? 'Date',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _buildDateField(),
+                  ],
+                ),
               ),
-              const SizedBox(width: 15),
+              const SizedBox(width: 12),
               Expanded(
-                child: _buildChildrenField(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      AppLocalizations.of(context)?.guest ?? 'Guest',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _buildGuestField(),
+                  ],
+                ),
               ),
             ],
           ),
           const SizedBox(height: 15),
-          _buildDateField(),
-          const SizedBox(height: 15),
           Container(
             width: double.infinity,
-            height: 50,
+            height: 55,
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [AppColors.gradientStart, AppColors.gradientEnd],
               ),
-              borderRadius: BorderRadius.circular(15),
+              borderRadius: BorderRadius.circular(30),
             ),
             child: ElevatedButton(
               onPressed: _isSearching ? null : _performSearch,
@@ -296,7 +394,7 @@ class _HomePageState extends State<HomePage> {
                 backgroundColor: Colors.transparent,
                 shadowColor: Colors.transparent,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
+                  borderRadius: BorderRadius.circular(30),
                 ),
               ),
               child: _isSearching
@@ -305,230 +403,137 @@ class _HomePageState extends State<HomePage> {
                       height: 20,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF8B4513)),
+                        valueColor: AlwaysStoppedAnimation<Color>(AppColors.red),
                       ),
                     )
                   : Text(
                       AppLocalizations.of(context)?.search ?? 'Search',
                       style: const TextStyle(
-                        color: Color(0xFF8B4513),
+                        color: AppColors.red,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
             ),
           ),
-          const SizedBox(height: 20),
-          _buildFilterButtons(),
         ],
       ),
     );
   }
 
   Widget _buildLocationField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          AppLocalizations.of(context)?.location ?? 'Location',
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: Colors.grey.shade300),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.location_on, color: Colors.grey.shade600, size: 20),
-              const SizedBox(width: 10),
-              Expanded(
-                child: TextField(
-                  controller: _locationController,
-                  decoration: InputDecoration(
-                    hintText: AppLocalizations.of(context)?.enterYourDestination ?? 'Enter your destination',
-                    hintStyle: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 14,
-                    ),
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.black87,
-                  ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.location_on, color: Colors.grey.shade600, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: TextField(
+              controller: _locationController,
+              decoration: InputDecoration(
+                hintText: AppLocalizations.of(context)?.enterYourDestination ?? 'Enter your destination',
+                hintStyle: TextStyle(
+                  color: Colors.grey.shade400,
+                  fontSize: 14,
                 ),
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
               ),
-            ],
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.black87,
+              ),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
   Widget _buildDateField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          AppLocalizations.of(context)?.date ?? 'Date',
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
-          ),
+    return InkWell(
+      onTap: () => _showDatePicker(),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(24),
         ),
-        const SizedBox(height: 8),
-        InkWell(
-          onTap: () => _showDatePicker(),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: Colors.grey.shade300),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.calendar_today, color: Colors.grey.shade600, size: 20),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    _checkInDate != null && _checkOutDate != null
-                        ? '${_getMonthName(_checkInDate!.month)} ${_checkInDate!.day} - ${_getMonthName(_checkOutDate!.month)} ${_checkOutDate!.day}'
-                        : _checkInDate != null
-                            ? '${_getMonthName(_checkInDate!.month)} ${_checkInDate!.day}, ${_checkInDate!.year}'
-                            : _selectedDate != null
-                                ? '${_getMonthName(_selectedDate!.month)} ${_selectedDate!.day}, ${_selectedDate!.year}'
-                                : AppLocalizations.of(context)?.selectDate ?? 'Select Date',
-                    style: TextStyle(
-                      color: (_checkInDate != null || _selectedDate != null) ? Colors.black87 : Colors.grey.shade600,
-                      fontSize: 14,
-                    ),
-                  ),
+        child: Row(
+          children: [
+            Icon(Icons.calendar_today, color: Colors.grey.shade600, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                _checkInDate != null && _checkOutDate != null
+                    ? '${_getMonthName(_checkInDate!.month)} ${_checkInDate!.day} - ${_getMonthName(_checkOutDate!.month)} ${_checkOutDate!.day}'
+                    : _checkInDate != null
+                        ? '${_getMonthName(_checkInDate!.month)} ${_checkInDate!.day}'
+                        : _selectedDate != null
+                            ? '${_getMonthName(_selectedDate!.month)} ${_selectedDate!.day}'
+                            : AppLocalizations.of(context)?.selectDate ?? 'Select Date',
+                style: TextStyle(
+                  color: (_checkInDate != null || _selectedDate != null) ? Colors.black87 : Colors.grey.shade400,
+                  fontSize: 14,
                 ),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
-  Widget _buildAdultsField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          AppLocalizations.of(context)?.adults ?? 'Adults',
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
+  Widget _buildGuestField() {
+    final adults = int.tryParse(_adultsController.text) ?? 1;
+    final children = int.tryParse(_childrenController.text) ?? 0;
+    final totalGuests = adults + children;
+    
+    return InkWell(
+      onTap: () {
+        showModalBottomSheet(
+          context: context,
+          backgroundColor: Colors.transparent,
+          builder: (context) => GuestPickerBottomSheet(
+            adults: adults,
+            children: children,
+            onGuestsSelected: (newAdults, newChildren) {
+              setState(() {
+                _adultsController.text = newAdults.toString();
+                _childrenController.text = newChildren.toString();
+              });
+            },
           ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(24),
         ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: Colors.grey.shade300),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.person, color: Colors.grey.shade600, size: 20),
-              const SizedBox(width: 10),
-              Expanded(
-                child: TextField(
-                  controller: _adultsController,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                  ],
-                  decoration: InputDecoration(
-                    hintText: AppLocalizations.of(context)?.adults ?? 'Adults',
-                    hintStyle: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 14,
-                    ),
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.black87,
-                  ),
+        child: Row(
+          children: [
+            Icon(Icons.person, color: Colors.grey.shade600, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                totalGuests > 0 ? '$totalGuests ${totalGuests == 1 ? "Guest" : "Guests"}' : AppLocalizations.of(context)?.addGuest ?? 'Add guest',
+                style: TextStyle(
+                  color: totalGuests > 0 ? Colors.black87 : Colors.grey.shade400,
+                  fontSize: 14,
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-      ],
-    );
-  }
-
-  Widget _buildChildrenField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          AppLocalizations.of(context)?.children ?? 'Children',
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: Colors.grey.shade300),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.child_care, color: Colors.grey.shade600, size: 20),
-              const SizedBox(width: 10),
-              Expanded(
-                child: TextField(
-                  controller: _childrenController,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                  ],
-                  decoration: InputDecoration(
-                    hintText: AppLocalizations.of(context)?.children ?? 'Children',
-                    hintStyle: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 14,
-                    ),
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.black87,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
+      ),
     );
   }
 
@@ -815,7 +820,7 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildFilterButtons() {
     return SizedBox(
-      height: 40,
+      height: 30,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: _filters.length,
@@ -829,7 +834,7 @@ class _HomePageState extends State<HomePage> {
             },
             child: Container(
               margin: const EdgeInsets.only(right: 10),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
               decoration: BoxDecoration(
                 color: isSelected ? AppColors.red : AppColors.gradientStart,
                 borderRadius: BorderRadius.circular(20),
@@ -885,7 +890,7 @@ class _HomePageState extends State<HomePage> {
                         color: AppColors.gradientStart,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.arrow_back, size: 20),
+                      child: const Icon(Icons.arrow_back_ios, size: 18, color: Colors.black),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -904,7 +909,7 @@ class _HomePageState extends State<HomePage> {
                         color: AppColors.red,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.arrow_forward, color: Colors.white, size: 20),
+                      child: const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 18),
                     ),
                   ),
                 ],
@@ -951,7 +956,7 @@ class _HomePageState extends State<HomePage> {
         );
       },
       child: Container(
-        width: 250,
+        width:210,
         margin: const EdgeInsets.only(right: 15),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
@@ -1063,3 +1068,197 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
+// Guest Picker Bottom Sheet Widget
+class GuestPickerBottomSheet extends StatefulWidget {
+  final int adults;
+  final int children;
+  final Function(int, int) onGuestsSelected;
+
+  const GuestPickerBottomSheet({
+    super.key,
+    required this.adults,
+    required this.children,
+    required this.onGuestsSelected,
+  });
+
+  @override
+  State<GuestPickerBottomSheet> createState() => _GuestPickerBottomSheetState();
+}
+
+class _GuestPickerBottomSheetState extends State<GuestPickerBottomSheet> {
+  late int _adults;
+  late int _children;
+
+  @override
+  void initState() {
+    super.initState();
+    _adults = widget.adults;
+    _children = widget.children;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFFFDF9E0),
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(30),
+          topRight: Radius.circular(30),
+        ),
+      ),
+      padding: const EdgeInsets.all(30),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Drag handle
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Text(
+            AppLocalizations.of(context)?.addGuest ?? 'Add guest',
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
+            ),
+          ),
+          const SizedBox(height: 30),
+          // Adults row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                AppLocalizations.of(context)?.adults ?? 'Adults',
+                style: const TextStyle(
+                  fontSize: 18,
+                  color: Colors.black87,
+                ),
+              ),
+              Row(
+                children: [
+                  _buildCounterButton(
+                    icon: Icons.remove_circle_outline,
+                    onPressed: _adults > 1
+                        ? () {
+                            setState(() {
+                              _adults--;
+                            });
+                          }
+                        : null,
+                  ),
+                  const SizedBox(width: 20),
+                  Text(
+                    _adults.toString(),
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black,
+                    ),
+                  ),
+                  const SizedBox(width: 20),
+                  _buildCounterButton(
+                    icon: Icons.add_circle_outline,
+                    onPressed: () {
+                      setState(() {
+                        _adults++;
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 25),
+          // Children row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                AppLocalizations.of(context)?.children ?? 'Children',
+                style: const TextStyle(
+                  fontSize: 18,
+                  color: Colors.black87,
+                ),
+              ),
+              Row(
+                children: [
+                  _buildCounterButton(
+                    icon: Icons.remove_circle_outline,
+                    onPressed: _children > 0
+                        ? () {
+                            setState(() {
+                              _children--;
+                            });
+                          }
+                        : null,
+                  ),
+                  const SizedBox(width: 20),
+                  Text(
+                    _children.toString(),
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black,
+                    ),
+                  ),
+                  const SizedBox(width: 20),
+                  _buildCounterButton(
+                    icon: Icons.add_circle_outline,
+                    onPressed: () {
+                      setState(() {
+                        _children++;
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 40),
+          // Done button
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: () {
+                widget.onGuestsSelected(_adults, _children);
+                Navigator.pop(context);
+              },
+              child: Text(
+                'Done',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.blue,
+                ),
+              ),
+            ),
+          ),
+          SizedBox(height: MediaQuery.of(context).padding.bottom),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCounterButton({
+    required IconData icon,
+    required VoidCallback? onPressed,
+  }) {
+    return InkWell(
+      onTap: onPressed,
+      child: Icon(
+        icon,
+        size: 32,
+        color: onPressed != null ? Colors.grey.shade700 : Colors.grey.shade300,
+      ),
+    );
+  }
+}

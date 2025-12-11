@@ -47,32 +47,37 @@ class _SplashScreenState extends State<SplashScreen> {
             colors: [AppColors.splashGradientStart, AppColors.splashGradientEnd],
           ),
         ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text(
-                'Flash Rooms',
-                style: TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.red,
-                ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Spacer(),
+            // Flash Room Logo
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 40),
+              child: Image.asset(
+                'assets/images/flashroom.png',
+                fit: BoxFit.contain,
               ),
-              const SizedBox(height: 12),
-              const Text(
+            ),
+            const Spacer(),
+            // Tagline at bottom
+            Padding(
+              padding: const EdgeInsets.only(bottom: 50),
+              child: const Text(
                 'Available near all major temples',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: FontWeight.w400,
                   color: AppColors.red,
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
+
 
